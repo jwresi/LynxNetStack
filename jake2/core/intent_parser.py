@@ -433,6 +433,8 @@ class IntentParser:
             "site summary",
             "status at",
         )
+        # WHY: get_nycha_port_audit is site-agnostic. Keep legacy NYCHA tokens for
+        # backward compat; add generic phrasing so any site can trigger port audits.
         nycha_port_audit_tokens = (
             "audit nycha ports",
             "nycha port audit",
@@ -446,6 +448,20 @@ class IntentParser:
             "nycha uplink",
             "nycha port issues",
             "nycha switch uplink",
+            # Generic site-agnostic phrasing
+            "audit the port patching",
+            "port patching audit",
+            "audit port patching",
+            "audit switch uplinks",
+            "switch uplink audit",
+            "audit uplink ports",
+            "uplink port audit",
+            "wrong uplink",
+            "switches have wrong uplink",
+            "switches using wrong port",
+            "uplink patching",
+            "port mispatch",
+            "wrong port patching",
         )
         site_punch_list_tokens = (
             "what needs to be fixed",
@@ -1255,9 +1271,13 @@ class IntentParser:
             )
 
         if any(token in lowered for token in nycha_port_audit_tokens):
+            # WHY: site_id is resolved above from alias_site_id or explicit_target.
+            # Do not hardcode 000007 — the port audit is site-agnostic.
+            # Fall back to 000007 only when no site was specified (legacy NYCHA default).
+            port_audit_site = site_id or "000007"
             return IntentSchema(
                 intent="get_nycha_port_audit",
-                entities=IntentEntities(site_id="000007", scope="all"),
+                entities=IntentEntities(site_id=port_audit_site, scope="all"),
                 confidence=0.93,
                 ambiguous=False,
                 clarification_needed=None,

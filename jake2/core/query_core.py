@@ -834,14 +834,24 @@ def parse_operator_query(query: str) -> dict:
             return {'action': 'get_transport_radio_summary', 'params': {'mac': mac_match.group(1)}}
         return {'action': 'get_transport_radio_summary', 'params': {'query': q}}
 
-    nycha_port_audit_tokens = (
+    # WHY: get_nycha_port_audit is site-agnostic despite its name — it audits
+    # switch uplink port patching for whichever site is requested.
+    # Tokens cover both legacy NYCHA-specific phrasing and generic multi-site phrasing.
+    port_audit_tokens = (
+        # Legacy NYCHA-specific (keep for backward compat)
         'audit nycha ports', 'nycha port audit', 'which nycha switches',
         'nycha switches have wrong', 'nycha switches using ether48',
         'ether48 instead of ether49', 'wrong patching at nycha',
-        'wrong patch', 'wrong uplink at nycha', 'nycha uplink',
+        'wrong uplink at nycha', 'nycha uplink',
         'nycha port issues', 'nycha switch uplink',
+        # Generic site-agnostic phrasing
+        'audit the port patching', 'port patching audit', 'audit port patching',
+        'audit switch uplinks', 'switch uplink audit', 'audit uplink ports',
+        'uplink port audit', 'wrong uplink', 'wrong patch port',
+        'switches have wrong uplink', 'switches using wrong port',
+        'uplink patching', 'port mispatch', 'wrong port patching',
     )
-    if any(token in lower for token in nycha_port_audit_tokens):
+    if any(token in lower for token in port_audit_tokens):
         return {'action': 'get_nycha_port_audit', 'params': {'site_id': effective_site_id or '000007'}}
 
     nycha_audit_workbook_tokens = (
