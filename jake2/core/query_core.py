@@ -504,18 +504,22 @@ def parse_operator_query(query: str) -> dict:
     if "loop" in lower or "storm" in lower:
         if effective_site_id:
             return {"action": "get_site_loop_suspicion", "params": {"site_id": effective_site_id}}
-        if "nycha" in lower:
-            return {"action": "get_site_loop_suspicion", "params": {"site_id": "000007"}}
-        return {"action": "get_site_loop_suspicion", "params": {"site_id": "000007"}}
+        # WHY: "nycha" is already resolved to effective_site_id via SITE_ALIAS_MAP
+        # before this point. If no site was resolved, return a clarification prompt
+        # rather than defaulting to NYCHA — this query could be for any site.
+        return {"action": "get_site_loop_suspicion", "params": {"site_id": None, "clarify": True}}
     if _contains_any(lower, ("bridge host weirdness", "bridge hosts weird", "bridge host weird", "bridge host odd", "bridge host off", "mikrotik bridge host", "bridge host")) and _contains_any(lower, ("weird", "off", "odd", "wrong", "looks off")):
         if effective_site_id:
             return {"action": "get_site_bridge_host_weirdness", "params": {"site_id": effective_site_id}}
         if "nycha" in lower or "mikrotik" in lower or "mikrotiks" in lower:
-            return {"action": "get_site_bridge_host_weirdness", "params": {"site_id": "000007"}}
+            # WHY: "mikrotik" alone does not identify a site — all sites use MikroTik.
+            # Return clarification rather than defaulting to NYCHA.
+            return {"action": "get_site_bridge_host_weirdness", "params": {"site_id": None, "clarify": True}}
     if _contains_any(lower, ("mac learning", "learned mac", "learned macs", "too broad", "too many paths", "upstream and not at the edge", "upstream but not at the edge", "only showing upstream", "not at the edge")):
         if effective_site_id:
             return {"action": "get_site_bridge_host_weirdness", "params": {"site_id": effective_site_id}}
-        return {"action": "get_site_bridge_host_weirdness", "params": {"site_id": "000007"}}
+        # WHY: ambiguous — ask for a site rather than defaulting to NYCHA.
+        return {"action": "get_site_bridge_host_weirdness", "params": {"site_id": None, "clarify": True}}
     if _contains_any(lower, ("cnwave neighbors", "radio neighbors", "live neighbors", "ipv4 neighbors", "what devices are behind", "what is behind this radio", "what is behind that radio", "neighbors on this radio", "neighbors on that radio")):
         params: dict[str, Any] = {"query": q}
         if effective_site_id:

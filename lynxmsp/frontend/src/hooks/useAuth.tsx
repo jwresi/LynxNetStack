@@ -48,7 +48,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       formData.append('username', credentials.username);
       formData.append('password', credentials.password);
 
-      const response = await axios.post<AuthResponse>('http://localhost:8000/auth/login', formData);
+      const response = await axios.post<AuthResponse>(`${process.env.REACT_APP_API_URL || ''}/auth/login`, formData);
       const { access_token, user: userData } = response.data;
 
       localStorage.setItem('token', access_token);

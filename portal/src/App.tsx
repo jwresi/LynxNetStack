@@ -92,7 +92,7 @@ function Header() {
           className="btn-ghost text-xs gap-1.5">
           <Wifi size={13} /> Tech App
         </a>
-        <a href="http://localhost:8080" target="_blank" rel="noopener"
+        <a href="http://localhost:8017" target="_blank" rel="noopener"
           className="btn-ghost text-xs gap-1.5">
           <Terminal size={13} /> Jake2
         </a>

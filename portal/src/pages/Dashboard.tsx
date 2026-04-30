@@ -127,8 +127,8 @@ function JakeQuickQuery() {
   const [loading, setLoading] = useState(false)
 
   const QUICK = [
-    'how many customers online at nycha',
-    'which switches have issues',
+    'how many customers are online right now',
+    'which sites have issues',
     'are there switches on old firmware',
   ]
 

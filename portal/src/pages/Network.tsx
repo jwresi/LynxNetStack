@@ -57,7 +57,7 @@ export default function Network() {
           <span className="text-sm font-semibold text-slate-700">Network Intelligence</span>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {['which switches have issues', 'are there switches on old firmware', 'show me nycha site status', 'what is online at chenoweth'].map(q => (
+          {['which switches have issues', 'are there switches on old firmware', 'show me status of all sites', 'what is online at chenoweth', 'how many customers are online'].map(q => (
             <button key={q} onClick={() => ask(q)}
               className="text-xs px-2.5 py-1 rounded-full border border-surface-3 hover:border-brand-400 hover:text-brand-700 text-slate-500 transition-colors">
               {q}

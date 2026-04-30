@@ -3251,17 +3251,23 @@ class JakeOps:
         if links:
             return links
 
-        if canonical_scope(site_id) != "000007":
-            return []
-
+        # WHY: The local radio scan covers cnWave devices across all sites.
+        # We no longer gate this on 000007 — instead we filter by site prefix
+        # when site_id is provided, so other sites with cnWave transport
+        # (e.g. 000007, 000008, future sites) get results from the same path.
         radio_scan = load_transport_radio_scan()
         mac_to_name: dict[str, str] = {}
         neighbors_by_name: dict[str, set[str]] = {}
+        # WHY: Filter by site_id prefix when provided so only devices belonging
+        # to the requested site are returned. When site_id is None, return all.
+        effective_prefix = (canonical_scope(site_id) + ".") if site_id else None
         for row in radio_scan.get("results") or []:
             if row.get("type") != "cambium" or row.get("status") != "ok":
                 continue
             name = str(row.get("name") or "").strip()
             if not name:
+                continue
+            if effective_prefix and not name.startswith(effective_prefix):
                 continue
             seen_macs = {
                 norm_mac(str(value))
@@ -5155,13 +5161,20 @@ print(json.dumps(out))
                     "status": radio.get("status"),
                     "site_id": transport.get("site_id"),
                 }
-            if canonical_scope(resolved_site_id) == "000007" and "Fenimore" in block_label:
-                legacy_handoff_hint = {
-                    "device_identity": "000007.055.R01",
-                    "interface": "sfp-sfpplus10",
-                    "comment": "Fenimore V5000",
-                    "source": "NYCHA_NETWORK_TOPOLOGY_2026-03-13",
-                }
+            # WHY: Per-site legacy handoff hints live in SITE_SERVICE_PROFILES
+            # under "legacy_handoff_hints": a list of {block_label_fragment, device_identity,
+            # interface, comment, source}. This replaces the hardcoded Fenimore check
+            # and allows any site to declare its own router-transport topology shortcuts.
+            site_profile = SITE_SERVICE_PROFILES.get(canonical_scope(resolved_site_id) or "", {})
+            for hint in (site_profile.get("legacy_handoff_hints") or []):
+                if hint.get("block_label_fragment", "") in block_label:
+                    legacy_handoff_hint = {
+                        "device_identity": hint.get("device_identity"),
+                        "interface":       hint.get("interface"),
+                        "comment":         hint.get("comment"),
+                        "source":          hint.get("source"),
+                    }
+                    break
 
         exact_access_match = None
         if building_model and unit:

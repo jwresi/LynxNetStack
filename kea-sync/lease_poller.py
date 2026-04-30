@@ -33,6 +33,9 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
+# WHY: These defaults match the ResiBridge production environment.
+# Override with environment variables for any other deployment:
+#   KEA_API_URL=http://<kea-host>:8000 NETBOX_URL=http://<netbox-host>:8001
 KEA_API_URL = os.environ.get("KEA_API_URL", "http://172.27.28.50:8000")
 NETBOX_URL = os.environ.get("NETBOX_URL", "http://172.27.48.233:8001").rstrip("/")
 NETBOX_TOKEN = os.environ.get("NETBOX_TOKEN", "")

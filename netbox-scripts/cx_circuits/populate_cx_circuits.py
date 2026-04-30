@@ -40,6 +40,7 @@ import sys
 import time
 import requests
 
+# WHY: Default matches ResiBridge production NetBox. Override with NETBOX_URL env var.
 NETBOX_URL = os.environ.get("NETBOX_URL", "http://172.27.48.233:8001").rstrip("/")
 NETBOX_TOKEN = os.environ.get("NETBOX_TOKEN", "")
 HEADERS = {

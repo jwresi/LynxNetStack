@@ -34,3 +34,13 @@ model_interfaces:
     isolation_ports:
       start: 1
       end: 48
+
+# RADIUS configuration (set in NetBox device config context, not here).
+# The router.jinja2 template reads ctx.mikrotik.radius.address and
+# ctx.mikrotik.radius.secret from the NetBox config context for each device.
+# Example NetBox config context for a router:
+#   mikrotik:
+#     radius:
+#       address: "172.27.209.248"
+#       secret: "<stored in NetBox secrets, not in this file>"
+# Never hardcode RADIUS secrets in templates or config files.

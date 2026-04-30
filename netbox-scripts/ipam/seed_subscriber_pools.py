@@ -25,6 +25,7 @@ import os
 import sys
 import requests
 
+# WHY: Default matches ResiBridge production NetBox. Override with NETBOX_URL env var.
 NETBOX_URL = os.environ.get("NETBOX_URL", "http://172.27.48.233:8001").rstrip("/")
 NETBOX_TOKEN = os.environ.get("NETBOX_TOKEN", "")
 HEADERS = {
@@ -33,8 +34,9 @@ HEADERS = {
     "Accept": "application/json",
 }
 
-# NYCHA site slug — verify with: GET /api/dcim/sites/?slug=000007
-SITE_SLUG = "000007"
+# Site slug for which to create subscriber IP pools.
+# Override with SITE_SLUG env var for non-NYCHA deployments.
+SITE_SLUG = os.environ.get("SITE_SLUG", "000007")
 
 # Prefixes to create
 SUBSCRIBER_POOLS = [

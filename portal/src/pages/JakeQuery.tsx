@@ -5,12 +5,14 @@ import { jake } from '../services/api'
 interface Msg { role: 'user' | 'jake'; text: string; raw?: any; ts: number }
 
 const SUGGESTIONS = [
-  'how many customers online at nycha',
+  'how many customers are online right now',
   'which switches have high error rates',
-  'show me the status of building 000007.001',
-  'which mcp should i use for bridge vlan issues at nycha',
+  'which sites have the most offline customers',
+  'which mcp should i use for bridge vlan issues',
   'are there any switches on old firmware',
-  'what cpE devices are offline at chenoweth',
+  'show me the status of all sites',
+  'what is online at chenoweth',
+  'how is nycha doing',
 ]
 
 export default function JakeQuery() {

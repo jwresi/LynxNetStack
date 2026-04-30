@@ -149,6 +149,18 @@ SITE_SERVICE_PROFILES: dict[str, dict[str, Any]] = {
         "summary": "Switch-access TP-Link and Vilo site. Prefer local subscriber export, switch MAC sightings, bridge evidence, and Vilo audit data over OLT assumptions.",
         "primary_sources": ["local_online_cpe_export", "trace_mac", "switch_mac_evidence", "vilo_inventory_audit", "netbox_site_inventory"],
         "count_preference": ["local_online_cpe_export", "router_arp", "router_ppp_active"],
+        # WHY: Known router-to-transport interface topology for this site.
+        # Used by get_customer_access_trace to resolve cnWave block labels to
+        # physical router interfaces without a live API call.
+        "legacy_handoff_hints": [
+            {
+                "block_label_fragment": "Fenimore",
+                "device_identity": "000007.055.R01",
+                "interface": "sfp-sfpplus10",
+                "comment": "Fenimore V5000",
+                "source": "NYCHA_NETWORK_TOPOLOGY_2026-03-13",
+            },
+        ],
     },
     # WHY: Chenoweth is a TP-Link OLT site, so OLT ONU state and OLT-side MAC evidence are first-class inputs.
     "000008": {

@@ -78,7 +78,11 @@ add name={{ username }} group={{ user.group }} password={{ user.password }}
 set use-radius=yes
 
 /radius
-add address=172.27.209.248 secret=jSniRkQfIwDRJUWG7Mwp service=login
+{%- if ctx.mikrotik.radius is defined and ctx.mikrotik.radius.address is defined %}
+add address={{ ctx.mikrotik.radius.address }} secret={{ ctx.mikrotik.radius.secret }} service=login
+{%- else %}
+{# ERROR: ctx.mikrotik.radius.address and ctx.mikrotik.radius.secret must be set in NetBox config context. Do not hardcode RADIUS credentials in templates. #}
+{%- endif %}
 
 ### SNMP Configuration
 /snmp community

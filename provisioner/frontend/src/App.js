@@ -705,9 +705,10 @@ const RouterOSNetInstaller = () => {
   const downloadSampleCSV = () => {
     const header = ['MAC','Hostname','IP','VLAN','Model'];
     const samples = [
-      ['f4:1e:57:89:46:39','000007.002.SW01',`${config.baseNetwork}.55`,'10','CRS326-24G-2S+RM'],
-      ['f4:1e:57:12:34:56','000007.003.SW01',`${config.baseNetwork}.56`,'10','CRS418-8P-8G-2S+RM'],
-      ['f4:1e:57:65:43:21','000007.004.SW01',`${config.baseNetwork}.57`,'10','CRS354-48P-4S+2Q+RM']
+      // Sample rows — replace with real device MACs, hostnames, and IPs for your site
+      ['f4:1e:57:89:46:39',`${config.hostname || 'SITE.001.SW01'}`,`${config.baseNetwork}.55`,'10','CRS326-24G-2S+RM'],
+      ['f4:1e:57:12:34:56',`${config.hostname || 'SITE.002.SW01'}`,`${config.baseNetwork}.56`,'10','CRS418-8P-8G-2S+RM'],
+      ['f4:1e:57:65:43:21',`${config.hostname || 'SITE.003.SW01'}`,`${config.baseNetwork}.57`,'10','CRS354-48P-4S+2Q+RM']
     ];
     const csv = [header.join(','), ...samples.map(r => r.join(','))].join('\n') + '\n';
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -1488,7 +1489,7 @@ const RouterOSNetInstaller = () => {
                       </label>
                       <input
                         type="text"
-                        placeholder="000007.002.SW01"
+                        placeholder="SITE.002.SW01 — e.g. 000007.002.SW01"
                         value={device.hostname}
                         onChange={(e) =>
                           updateDevice(device.id, "hostname", e.target.value)
