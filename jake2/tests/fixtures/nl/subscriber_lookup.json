@@ -1,0 +1,14 @@
+[
+  {
+    "raw": "what is wrong with savoy1unit3f",
+    "expected_intent": "get_cpe_state",
+    "expected_site": "000002",
+    "notes": "Known subscriber label should resolve directly to the mapped MAC and CPE-state action."
+  },
+  {
+    "raw": "check on savoy1unit3n",
+    "expected_intent": "get_cpe_state",
+    "expected_site": "000002",
+    "notes": "Subscriber shorthand should route through the heuristic subscriber-name lookup path."
+  }
+]

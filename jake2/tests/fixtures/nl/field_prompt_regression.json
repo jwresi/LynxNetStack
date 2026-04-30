@@ -1,0 +1,20 @@
+[
+  {
+    "raw": "How are things looking at Cambridge today?",
+    "expected_intent": "get_site_summary",
+    "expected_site": "000004",
+    "notes": "Field-language summary prompt should resolve Cambridge alias."
+  },
+  {
+    "raw": "How are things looking at Euclid today?",
+    "expected_intent": "get_site_summary",
+    "expected_site": "000011",
+    "notes": "OLT site summary prompt should resolve Euclid alias."
+  },
+  {
+    "raw": "Pull a list of probable Vilo CPEs at Sweetwater",
+    "expected_intent": "find_cpe_candidates",
+    "expected_site": "000022",
+    "notes": "Vilo candidate lookup maps to an existing deterministic execution path."
+  }
+]

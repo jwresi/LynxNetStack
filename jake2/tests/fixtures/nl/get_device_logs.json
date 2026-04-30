@@ -1,0 +1,14 @@
+[
+  {
+    "raw": "check logs for 000008.R1",
+    "expected_intent": "get_device_logs",
+    "expected_site": "000008",
+    "notes": "device-scoped log query"
+  },
+  {
+    "raw": "what happened on 000007.R1 in the last hour",
+    "expected_intent": "get_device_logs",
+    "expected_site": "000007",
+    "notes": "device logs with explicit time window"
+  }
+]

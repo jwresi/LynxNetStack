@@ -1,0 +1,14 @@
+[
+  {
+    "raw": "trace the radio handoff at nycha",
+    "expected_intent": "get_radio_handoff_trace",
+    "expected_site": "000007",
+    "notes": "Site-scoped radio handoff phrasing should route to the radio handoff trace action."
+  },
+  {
+    "raw": "radio handoff trace chenoweth",
+    "expected_intent": "get_radio_handoff_trace",
+    "expected_site": "000008",
+    "notes": "Named-site handoff phrasing should resolve to the same radio handoff trace action."
+  }
+]

@@ -1,0 +1,61 @@
+# Jake Knowledgebase Audit
+
+- total classified files: 122
+- rag-eligible files: 78
+- training-candidate files: 51
+- eval-only files: 32
+- authoritative files: 78
+
+## RAG-Eligible Highlights
+- `docs/JAKE_API.md`: repo or integration documentation
+- `docs/JAKE_NETBOX_MCP_SETUP.md`: repo or integration documentation
+- `docs/JAKE_REPO_INDEX.md`: repo or integration documentation
+- `docs/README.md`: repo or integration documentation
+- `docs/SAVOY_OLT_FIELD_NOTES_2026-04-02.md`: site field notes
+- `docs/controllers/CNWAVE_CONTROLLER_WIRING_2026-04-09.md`: controller and tool surface documentation
+- `docs/controllers/LYNXMSP_DHCP_WIRING_2026-04-09.md`: controller and tool surface documentation
+- `docs/controllers/OLT_CLI_DISCOVERY_2026-04-03.md`: controller and tool surface documentation
+- `docs/controllers/POSITRON_CLI_DISCOVERY_2026-04-03.md`: controller and tool surface documentation
+- `docs/controllers/README.md`: controller and tool surface documentation
+- `docs/controllers/ROUTEROS_ACCESS_MCP_BATCH1_2026-04-04.md`: controller and tool surface documentation
+- `docs/controllers/ROUTEROS_DISPATCH_MCP_2026-04-04.md`: controller and tool surface documentation
+- `docs/controllers/ROUTEROS_OPS_MCP_BATCH6_2026-04-04.md`: controller and tool surface documentation
+- `docs/controllers/ROUTEROS_PLATFORM_MCP_BATCH5_2026-04-04.md`: controller and tool surface documentation
+- `docs/controllers/ROUTEROS_ROUTING_MCP_BATCH3_2026-04-04.md`: controller and tool surface documentation
+- `docs/controllers/ROUTEROS_SWITCHING_MCP_BATCH2_2026-04-04.md`: controller and tool surface documentation
+- `docs/controllers/ROUTEROS_WIRELESS_MCP_BATCH4_2026-04-04.md`: controller and tool surface documentation
+- `docs/controllers/SWOS_SWITCHING_MCP_BATCH1_2026-04-04.md`: controller and tool surface documentation
+- `docs/controllers/TAUC_MCP.md`: controller and tool surface documentation
+- `docs/controllers/TP_LINK_ONU_SUBSCRIBER_JOIN_WORKFLOW_2026-04-03.md`: controller and tool surface documentation
+- `docs/controllers/VILO_API_SURFACE_2026-04-03.md`: controller and tool surface documentation
+- `docs/controllers/VILO_API_SURFACE_2026-04-08.md`: controller and tool surface documentation
+- `docs/external/official/CNWAVE_CNMAESTRO_E2E_MANAGEMENT_2026-04-10.md`: official external documentation staged for RAG
+- `docs/external/official/MIKROTIK_CAPSMAN_AND_VLANS_2026-04-10.md`: official external documentation staged for RAG
+- `docs/external/official/ROUTEROS_RELEASE_TREE_2026-04-10.md`: official external documentation staged for RAG
+
+## Training/Eval Highlights
+- `docs/jake/JAKE_000004_FULL_PROCESS_Q1_Q50.md`: eval and assessment material
+- `docs/jake/JAKE_000022_FULL_PROCESS_Q1_Q50.md`: eval and assessment material
+- `docs/jake/JAKE_50_QUESTION_CAPABILITY_AUDIT.md`: eval and assessment material
+- `docs/jake/JAKE_50_QUESTION_KNOWLEDGE_CHECK_2026-04-03.md`: eval and assessment material
+- `docs/jake/JAKE_50_QUESTION_REGRESSION_CHECKLIST.md`: eval and assessment material
+- `docs/jake/JAKE_ADVANCED_50_QUESTION_STRESS_TEST_2026-04-05.md`: Jake improvement material
+- `docs/jake/JAKE_CORRELATED_ROOT_CAUSE_Q1_Q50.md`: eval and assessment material
+- `docs/jake/JAKE_CPE_KNOWLEDGE_PACK.md`: operator behavior and knowledge source
+- `docs/jake/JAKE_CROSS_SYSTEM_CORRELATION_CAPABILITY_AUDIT.md`: eval and assessment material
+- `docs/jake/JAKE_CROSS_SYSTEM_CORRELATION_CHECKLIST.md`: eval and assessment material
+- `docs/jake/JAKE_CROSS_SYSTEM_CORRELATION_Q1_Q50.md`: eval and assessment material
+- `docs/jake/JAKE_CROSS_SYSTEM_KNOWLEDGE_CHECK_2026-04-03.md`: eval and assessment material
+- `docs/jake/JAKE_FIELD_CONVERSATION_TRAINING_2026-04-05.md`: operator behavior and knowledge source
+- `docs/jake/JAKE_FIELD_CONVERSATION_TRAINING_2026-04-08.md`: operator behavior and knowledge source
+- `docs/jake/JAKE_MIKROTIK_KNOWLEDGE_PACK.md`: operator behavior and knowledge source
+- `docs/jake/JAKE_MIXED_PATH_COMPLEXITY_CAPABILITY_AUDIT.md`: eval and assessment material
+- `docs/jake/JAKE_MIXED_PATH_COMPLEXITY_CHECKLIST.md`: eval and assessment material
+- `docs/jake/JAKE_MIXED_PATH_COMPLEXITY_KNOWLEDGE_CHECK_2026-04-03.md`: eval and assessment material
+- `docs/jake/JAKE_MIXED_PATH_COMPLEXITY_Q1_Q50.md`: eval and assessment material
+- `docs/jake/JAKE_MLX_BOOTSTRAP_2026-04-10.md`: Jake improvement material
+- `docs/jake/JAKE_MLX_EVAL_FIRSTPASS_2026-04-10.md`: Jake improvement material
+- `docs/jake/JAKE_MLX_FIRSTPASS_RESULT_2026-04-10.md`: Jake improvement material
+- `docs/jake/JAKE_MULTI_SOURCE_METRICS_CAPABILITY_AUDIT.md`: eval and assessment material
+- `docs/jake/JAKE_MULTI_SOURCE_METRICS_CHECKLIST.md`: eval and assessment material
+- `docs/jake/JAKE_MULTI_SOURCE_METRICS_KNOWLEDGE_CHECK_2026-04-03.md`: eval and assessment material

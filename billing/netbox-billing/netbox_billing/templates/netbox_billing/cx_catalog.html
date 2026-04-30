@@ -1,0 +1,141 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>catalog :: resi.billing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'netbox_billing/cx.css' %}">
+</head>
+<body>
+  <main class="cx-app">
+    <header class="cx-topbar">
+      <h1 class="brand">catalog management</h1>
+      <a href="{% url 'plugins:netbox_billing:billingaccount_list' %}?eng=1" class="link-engineer">engineer view</a>
+    </header>
+
+    <nav class="view-nav">
+      <a href="{% url 'plugins:netbox_billing:cx_dashboard' %}">customers</a>
+      <a href="{% url 'plugins:netbox_billing:cx_catalog' %}?tab=plans" class="{% if active_tab == 'plans' %}active{% endif %}">plans</a>
+      <a href="{% url 'plugins:netbox_billing:cx_catalog' %}?tab=bundles" class="{% if active_tab == 'bundles' %}active{% endif %}">bundles</a>
+      <a href="{% url 'plugins:netbox_billing:cx_catalog' %}?tab=services" class="{% if active_tab == 'services' %}active{% endif %}">services</a>
+    </nav>
+
+    <section class="cx-actions">
+      <a href="{% url 'plugins:netbox_billing:cx_add' model='tariffplan' %}?next={{ request.get_full_path|urlencode }}">create plan</a>
+      <a href="{% url 'plugins:netbox_billing:cx_add' model='tariffbundle' %}?next={{ request.get_full_path|urlencode }}">create bundle</a>
+      <a href="{% url 'plugins:netbox_billing:cx_add' model='subscription' %}?next={{ request.get_full_path|urlencode }}">create service</a>
+      <a href="{% url 'plugins:netbox_billing:cx_add' model='property' %}?next={{ request.get_full_path|urlencode }}">create property</a>
+      <a href="{% url 'plugins:netbox_billing:cx_add' model='unit' %}?next={{ request.get_full_path|urlencode }}">create unit</a>
+    </section>
+
+    {% if active_tab == 'plans' %}
+    <section class="cx-table-panel">
+      <h3>tariff plans</h3>
+      <table class="cx-table">
+        <thead><tr><th>name</th><th>type</th><th>status</th><th>price</th><th>cycle</th><th>actions</th></tr></thead>
+        <tbody>
+          {% for plan in plans %}
+          <tr>
+            <td>{{ plan.name }}</td>
+            <td>{{ plan.get_tariff_type_display }}</td>
+            <td>{{ plan.get_status_display }}</td>
+            <td>{{ plan.monthly_price }}</td>
+            <td>{{ plan.get_billing_cycle_display }}</td>
+            <td>
+              <a href="{% url 'plugins:netbox_billing:cx_edit' model='tariffplan' pk=plan.pk %}?next={{ request.get_full_path|urlencode }}">edit</a>
+              <span class="sep">|</span>
+              <a href="{% url 'plugins:netbox_billing:cx_delete' model='tariffplan' pk=plan.pk %}?next={{ request.get_full_path|urlencode }}">remove</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6">no plans</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% endif %}
+
+    {% if active_tab == 'bundles' %}
+    <section class="cx-table-panel">
+      <h3>tariff bundles</h3>
+      <table class="cx-table">
+        <thead><tr><th>name</th><th>status</th><th>price</th><th>included plans</th><th>actions</th></tr></thead>
+        <tbody>
+          {% for bundle in bundles %}
+          <tr>
+            <td>{{ bundle.name }}</td>
+            <td>{{ bundle.get_status_display }}</td>
+            <td>{{ bundle.price }}</td>
+            <td>
+              {% for tariff in bundle.included_tariffs.all %}
+              {{ tariff.name }}{% if not forloop.last %}, {% endif %}
+              {% empty %}
+              -
+              {% endfor %}
+            </td>
+            <td>
+              <a href="{% url 'plugins:netbox_billing:cx_edit' model='tariffbundle' pk=bundle.pk %}?next={{ request.get_full_path|urlencode }}">edit</a>
+              <span class="sep">|</span>
+              <a href="{% url 'plugins:netbox_billing:cx_delete' model='tariffbundle' pk=bundle.pk %}?next={{ request.get_full_path|urlencode }}">remove</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5">no bundles</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% endif %}
+
+    {% if active_tab == 'services' %}
+    <section class="cx-table-panel">
+      <h3>customer services</h3>
+      <table class="cx-table">
+        <thead><tr><th>customer</th><th>status</th><th>plan/bundle</th><th>price</th><th>unit</th><th>cpe</th><th>actions</th></tr></thead>
+        <tbody>
+          {% for service in services %}
+          <tr>
+            <td>{{ service.account.tenant.name }}</td>
+            <td>{{ service.get_status_display }}</td>
+            <td>
+              {% if service.tariff_plan %}
+                {{ service.tariff_plan }}
+              {% elif service.tariff_bundle %}
+                {{ service.tariff_bundle }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+              {% if service.price_override != None %}
+                {{ service.price_override }}
+              {% elif service.tariff_plan %}
+                {{ service.tariff_plan.monthly_price }}
+              {% elif service.tariff_bundle %}
+                {{ service.tariff_bundle.price }}
+              {% else %}
+                0.00
+              {% endif %}
+            </td>
+            <td>{{ service.unit|default:'-' }}</td>
+            <td>{{ service.cpe_device|default:'-' }}</td>
+            <td>
+              <a href="{% url 'plugins:netbox_billing:cx_edit' model='subscription' pk=service.pk %}?next={{ request.get_full_path|urlencode }}">edit</a>
+              <span class="sep">|</span>
+              <a href="{% url 'plugins:netbox_billing:cx_delete' model='subscription' pk=service.pk %}?next={{ request.get_full_path|urlencode }}">remove</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7">no services</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% endif %}
+  </main>
+</body>
+</html>

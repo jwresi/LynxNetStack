@@ -1,0 +1,14 @@
+[
+  {
+    "raw": "show me the topology for nycha",
+    "expected_intent": "get_site_topology",
+    "expected_site": "000007",
+    "notes": "Direct topology phrasing should map to the site topology action."
+  },
+  {
+    "raw": "site topology for chenoweth",
+    "expected_intent": "get_site_topology",
+    "expected_site": "000008",
+    "notes": "Named-site topology phrasing should resolve to the same topology action."
+  }
+]

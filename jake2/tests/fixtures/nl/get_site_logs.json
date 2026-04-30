@@ -1,0 +1,14 @@
+[
+  {
+    "raw": "what happened at nycha",
+    "expected_intent": "get_site_logs",
+    "expected_site": "000007",
+    "notes": "site-scoped recent logs default window"
+  },
+  {
+    "raw": "any errors on chenoweth",
+    "expected_intent": "get_site_logs",
+    "expected_site": "000008",
+    "notes": "site log query with error filter wording"
+  }
+]

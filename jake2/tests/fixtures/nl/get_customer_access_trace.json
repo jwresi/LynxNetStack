@@ -1,0 +1,14 @@
+[
+  {
+    "raw": "what can you tell me about Chenoweth1Unit201",
+    "expected_intent": "get_customer_access_trace",
+    "expected_site": "000008",
+    "notes": "Subscriber label should route to access trace, not site summary."
+  },
+  {
+    "raw": "what can you tell me about NYCHA726-752Fenimore1B",
+    "expected_intent": "get_customer_access_trace",
+    "expected_site": "000007",
+    "notes": "NYCHA subscriber-style block label should route to access trace."
+  }
+]

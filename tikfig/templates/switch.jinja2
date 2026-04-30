@@ -1,0 +1,188 @@
+############## Switch Device Configuration ##############
+# RouterOS Switch Template
+# Supports: CRS354-48G-4S+2Q+, CRS326-24G-2S+
+# Safer VLAN enforcement to prevent access/trunk bleed issues
+
+{% with ctx = device.get_config_context() %}
+{% set all_trunks = model_interfaces.trunk_ports[:] %}
+{% if model_interfaces.qsfp_ports is defined %}
+{% for q in model_interfaces.qsfp_ports %}
+{% if q not in all_trunks %}{% set _ = all_trunks.append(q) %}{% endif %}
+{% endfor %}
+{% endif %}
+
+### System Identity
+/system identity
+set name={{ device.name }}
+
+### System Timezone
+/system clock
+set time-zone-name={{ ctx.mikrotik.system.timezone }}
+
+### DNS
+/ip dns
+set servers={{ ctx.mikrotik.system.dns.servers | join(',') }}
+
+### Syslog
+/system logging action
+add name=remote-target target=remote remote={{ ctx.mikrotik.system.syslog.server }} bsd-syslog=yes syslog-facility={{ ctx.mikrotik.system.syslog.facility }}
+
+/system logging
+{% if ctx.mikrotik.system.syslog.topics.info %}
+add action=remote-target prefix="info" topics=info
+{% endif %}
+{% if ctx.mikrotik.system.syslog.topics.error %}
+add action=remote-target prefix="error" topics=error
+{% endif %}
+{% if ctx.mikrotik.system.syslog.topics.warning %}
+add action=remote-target prefix="warning" topics=warning
+{% endif %}
+{% if ctx.mikrotik.system.syslog.topics.critical %}
+add action=remote-target prefix="critical" topics=critical
+{% endif %}
+
+### Services
+/ip service
+{% for service in ctx.mikrotik.security.services.disabled %}
+set {{ service }} disabled=yes
+{% endfor %}
+set ssh address="{{ ctx.mikrotik.security.networks.management | join(',') }}"
+set api address="{{ ctx.mikrotik.security.networks.management | join(',') }}"
+set winbox address="{{ ctx.mikrotik.security.networks.management | join(',') }}"
+
+### User Groups
+/user group
+{% for group_name, policy in ctx.mikrotik.security.user_groups.items() %}
+add name={{ group_name }} policy="{{ policy }}"
+{% endfor %}
+
+### Users
+/user
+{% for username, user in ctx.mikrotik.security.users.items() %}
+add name={{ username }} group={{ user.group }} password={{ user.password }}
+{% endfor %}
+
+### SNMP
+/snmp community
+add name={{ ctx.mikrotik.monitoring.snmp.community }} addresses={{ ctx.mikrotik.security.networks.management | join(',') }}
+
+/snmp
+set enabled=yes trap-community={{ ctx.mikrotik.monitoring.snmp.trap_community }} trap-version={{ ctx.mikrotik.monitoring.snmp.trap_version }}
+
+### Interface Lists
+/interface list
+add name=MGMT
+add name=TRUNK
+add name=ACCESS
+
+### Bridge
+/interface bridge
+add name=bridge vlan-filtering=yes
+
+### VLAN Interface for Switch Management Only
+/interface vlan
+add interface=bridge name=vlan10 vlan-id=10
+
+### Port Isolation Configuration
+/interface ethernet switch port-isolation
+{% for port_idx in range(model_interfaces.isolation_ports.start, model_interfaces.isolation_ports.end + 1) %}
+set {{ port_idx }} forwarding-override={{ all_trunks | join(',') }}
+{% endfor %}
+
+### Bridge Ports
+/interface bridge port
+{# VLAN20 access ports #}
+{% for port in model_interfaces.access_ports.vlan20 %}
+add bridge=bridge interface={{ port }} pvid=20 ingress-filtering=yes frame-types=admit-only-untagged-and-priority-tagged
+{% endfor %}
+
+{# VLAN10 access ports, if any #}
+{% if model_interfaces.access_ports.vlan10 is defined %}
+{% for port in model_interfaces.access_ports.vlan10 %}
+add bridge=bridge interface={{ port }} pvid=10 ingress-filtering=yes frame-types=admit-only-untagged-and-priority-tagged
+{% endfor %}
+{% endif %}
+
+{# VLAN30 access ports #}
+{% for port in model_interfaces.access_ports.vlan30 %}
+add bridge=bridge interface={{ port }} pvid=30 ingress-filtering=yes frame-types=admit-only-untagged-and-priority-tagged
+{% endfor %}
+
+{# Trunk ports #}
+{% for port in model_interfaces.trunk_ports %}
+add bridge=bridge interface={{ port }} ingress-filtering=yes frame-types=admit-only-vlan-tagged
+{% endfor %}
+
+{# QSFP ports treated as trunks unless explicitly modeled otherwise #}
+{% if model_interfaces.qsfp_ports is defined %}
+{% for port in model_interfaces.qsfp_ports %}
+{% if port not in model_interfaces.trunk_ports %}
+add bridge=bridge interface={{ port }} ingress-filtering=yes frame-types=admit-only-vlan-tagged
+{% endif %}
+{% endfor %}
+{% endif %}
+
+### Bridge VLAN Table
+/interface bridge vlan
+{# VLAN 10 - management #}
+{% if model_interfaces.access_ports.vlan10 is defined and model_interfaces.access_ports.vlan10 %}
+add bridge=bridge vlan-ids=10 tagged=bridge,{{ all_trunks | join(',') }} untagged={{ model_interfaces.access_ports.vlan10 | join(',') }}
+{% else %}
+add bridge=bridge vlan-ids=10 tagged=bridge,{{ all_trunks | join(',') }}
+{% endif %}
+
+{# VLAN 20 - customer/data #}
+add bridge=bridge vlan-ids=20 tagged=bridge,{{ all_trunks | join(',') }} untagged={{ model_interfaces.access_ports.vlan20 | join(',') }}
+
+{# VLAN 30 - special equipment/security handoff #}
+add bridge=bridge vlan-ids=30 tagged=bridge,{{ all_trunks | join(',') }} untagged={{ model_interfaces.access_ports.vlan30 | join(',') }}
+
+### Interface List Members
+/interface list member
+add interface=vlan10 list=MGMT
+
+{% for port in model_interfaces.access_ports.vlan20 %}
+add interface={{ port }} list=ACCESS
+{% endfor %}
+{% if model_interfaces.access_ports.vlan10 is defined %}
+{% for port in model_interfaces.access_ports.vlan10 %}
+add interface={{ port }} list=ACCESS
+{% endfor %}
+{% endif %}
+{% for port in model_interfaces.access_ports.vlan30 %}
+add interface={{ port }} list=ACCESS
+{% endfor %}
+{% for port in all_trunks %}
+add interface={{ port }} list=TRUNK
+{% endfor %}
+
+### Neighbor Discovery
+/ip neighbor discovery-settings
+set discover-interface-list=MGMT
+
+### Management IP
+{% if device.primary_ip4 %}
+{% set mgmt_ip = device.primary_ip4.address %}
+{% set mgmt_network = device.primary_ip4.network_octets %}
+{% set gateway_ip = mgmt_network[0] ~ '.' ~ mgmt_network[1] ~ '.' ~ mgmt_network[2] ~ '.1' %}
+
+/ip address
+add address={{ mgmt_ip }} interface=vlan10 network={{ mgmt_network[0] }}.{{ mgmt_network[1] }}.{{ mgmt_network[2] }}.{{ mgmt_network[3] }}
+
+/ip route
+add dst-address=0.0.0.0/0 gateway={{ gateway_ip }}
+{% else %}
+# Management IP: set primary IPv4 in NetBox
+{% endif %}
+
+### System Note
+/system note
+set note="Property of Resibridge Inc" show-at-cli-login=yes
+
+/system routerboard settings
+set enter-setup-on=delete-key
+
+/tool romon
+set enabled=yes
+
+{% endwith %}

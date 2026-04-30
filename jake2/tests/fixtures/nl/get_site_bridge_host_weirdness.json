@@ -1,0 +1,14 @@
+[
+  {
+    "raw": "show me weird bridge host behavior at nycha",
+    "expected_intent": "get_site_bridge_host_weirdness",
+    "expected_site": "000007",
+    "notes": "Direct bridge-host weirdness phrasing should map to the site bridge-host anomaly action."
+  },
+  {
+    "raw": "bridge host weirdness at chenoweth",
+    "expected_intent": "get_site_bridge_host_weirdness",
+    "expected_site": "000008",
+    "notes": "Named-site bridge-host weirdness phrasing should resolve cleanly to that site's weirdness view."
+  }
+]

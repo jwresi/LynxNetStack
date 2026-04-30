@@ -1,0 +1,101 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>resi.billing :: customer console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'netbox_billing/cx.css' %}">
+</head>
+<body>
+  <main class="cx-app">
+    <header class="cx-topbar">
+      <h1 class="brand">resi.billing</h1>
+      <a href="{% url 'plugins:netbox_billing:billingaccount_list' %}?eng=1" class="link-engineer">engineer view</a>
+    </header>
+
+    <nav class="view-nav">
+      <a href="{% url 'plugins:netbox_billing:cx_dashboard' %}" class="active">customers</a>
+      <a href="{% url 'plugins:netbox_billing:cx_onboarding' %}">onboarding</a>
+      <a href="{% url 'plugins:netbox_billing:cx_catalog' %}">catalog</a>
+      <a href="{% url 'plugins:netbox_ticketing:serviceticket_board' %}">tickets</a>
+      <a href="{% url 'plugins:netbox_billing:cx_add' model='scheduledpayment' %}">scheduled payments</a>
+    </nav>
+
+    {% if messages %}
+    <section class="cx-messages">
+      {% for message in messages %}
+      <div class="cx-message {{ message.tags|default:'info' }}">{{ message }}</div>
+      {% endfor %}
+    </section>
+    {% endif %}
+
+    <section class="cx-stats-line">
+      <div>[ customers: {{ customer_count }} ]</div>
+      <div>[ mrr: {{ total_mrr }} ]</div>
+      <div>[ balance: {{ total_balance }} ]</div>
+      <div>[ open tickets: {{ open_ticket_count }} ]</div>
+    </section>
+
+    <form class="cx-searchbar" method="get">
+      <input type="text" name="q" value="{{ q }}" placeholder="search customer name, full name, login">
+      <button type="submit">search</button>
+    </form>
+
+    <form class="cx-filterrow" method="get">
+      <input type="hidden" name="q" value="{{ q }}">
+      <select name="status">
+        <option value="">all statuses</option>
+        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>active</option>
+        <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>inactive</option>
+      </select>
+      <button type="submit">apply filter</button>
+    </form>
+
+    <section class="cx-table-panel">
+      <table class="cx-table">
+        <thead>
+          <tr>
+            <th>customer</th>
+            <th>status</th>
+            <th>services</th>
+            <th>cpe</th>
+            <th>mrr</th>
+            <th>balance</th>
+            <th>payment</th>
+            <th>actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in account_rows %}
+          <tr>
+            <td>
+              <a href="{% url 'plugins:netbox_billing:cx_customer' pk=row.account.pk %}">{{ row.account.tenant.name }}</a>
+              {% if row.profile and row.profile.full_name %}
+              <div class="subcell">{{ row.profile.full_name }}</div>
+              {% endif %}
+            </td>
+            <td>{{ row.account.get_status_display }}</td>
+            <td>{{ row.active_services }}</td>
+            <td>{{ row.cpe_count }}</td>
+            <td>{{ row.mrr }}</td>
+            <td>{{ row.account.account_balance }}</td>
+            <td>{{ row.account.get_preferred_payment_method_display }}</td>
+            <td>
+              <a href="{% url 'plugins:netbox_billing:cx_customer' pk=row.account.pk %}">open</a>
+              <span class="sep">|</span>
+              <a href="{% url 'plugins:netbox_billing:cx_edit' model='billingaccount' pk=row.account.pk %}?next={{ request.get_full_path|urlencode }}">edit</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8">no results</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

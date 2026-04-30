@@ -1,0 +1,20 @@
+[
+  {
+    "raw": "audit 2020 Pacific St",
+    "expected_intent": "get_site_summary",
+    "expected_site": "000007",
+    "notes": "Street address with number prefix should resolve to NYCHA (000007)."
+  },
+  {
+    "raw": "how is 2020 Pacific Street doing",
+    "expected_intent": "get_site_summary",
+    "expected_site": "000007",
+    "notes": "Full street address with 'street' spelled out."
+  },
+  {
+    "raw": "what is going on at pacific st",
+    "expected_intent": "get_site_summary",
+    "expected_site": "000007",
+    "notes": "Street name only without number should also resolve to NYCHA."
+  }
+]

@@ -1,0 +1,14 @@
+[
+  {
+    "raw": "show ont info for TPLG-5F2024D5",
+    "expected_intent": "get_live_olt_ont_summary",
+    "expected_site": null,
+    "notes": "Old-Jake phrasing for a live OLT/ONT read."
+  },
+  {
+    "raw": "live olt for TPLG-5F2024D5",
+    "expected_intent": "get_live_olt_ont_summary",
+    "expected_site": null,
+    "notes": "Variant phrasing using the same live OLT path."
+  }
+]

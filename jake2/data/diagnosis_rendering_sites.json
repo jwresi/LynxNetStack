@@ -1,0 +1,39 @@
+{
+  "sites": [
+    {
+      "address": "1145 Lenox Rd",
+      "last_validated_at": "2026-04-26T00:00:00Z",
+      "validation_status": "safe",
+      "rendering_enabled": true,
+      "last_block_reason": ""
+    },
+    {
+      "address": "1144 Lenox Rd",
+      "last_validated_at": "2026-04-26T00:00:00Z",
+      "validation_status": "safe",
+      "rendering_enabled": true,
+      "last_block_reason": ""
+    },
+    {
+      "address": "1142 Lenox Rd",
+      "last_validated_at": "2026-04-26T00:00:00Z",
+      "validation_status": "safe",
+      "rendering_enabled": true,
+      "last_block_reason": ""
+    },
+    {
+      "address": "184 Tapscott St",
+      "last_validated_at": "2026-04-26T00:00:00Z",
+      "validation_status": "safe",
+      "rendering_enabled": true,
+      "last_block_reason": ""
+    },
+    {
+      "address": "104 Tapscott St",
+      "last_validated_at": "2026-04-26T00:00:00Z",
+      "validation_status": "safe",
+      "rendering_enabled": true,
+      "last_block_reason": ""
+    }
+  ]
+}

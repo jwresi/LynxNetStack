@@ -1,0 +1,1942 @@
+{
+  "dataset_name": "mikrotik_training_corpus",
+  "version": "1.0",
+  "scenario_count": 40,
+  "scenarios": [
+    {
+      "id": 1,
+      "title": "Rogue DHCP Servers / DHCP Leakage",
+      "problem": "Clients receive wrong IP ranges or inconsistent leases due to rogue DHCP and VLAN leakage.",
+      "symptoms": [
+        "Clients get unexpected 192.168.x.x addresses",
+        "DHCP offers appear on customer VLANs",
+        "Random lease flapping"
+      ],
+      "detection_commands": [
+        "/tool sniffer quick interface=BR-CGNAT port=67,68 ip-protocol=udp",
+        "/ip dhcp-server lease print",
+        "/tool torch interface=BR-CGNAT port=67,68"
+      ],
+      "fix_commands": [
+        "/ip firewall filter add chain=forward protocol=udp dst-port=67-68 action=drop comment=\"Block rogue DHCP\"",
+        "/ip firewall filter add chain=forward src-address-list=!trusted_dhcp_servers protocol=udp dst-port=67-68 action=drop",
+        "/interface bridge set BR_PPPoE vlan-filtering=yes",
+        "/interface bridge vlan add bridge=BR_PPPoE tagged=bridge,etherX vlan-ids=20"
+      ],
+      "reasoning_tags": [
+        "dhcp",
+        "rogue-server",
+        "vlan-leakage",
+        "layer2"
+      ]
+    },
+    {
+      "id": 2,
+      "title": "DHCP Flapping / Reassigning IPs",
+      "problem": "Clients continuously renew or appear to re-identify due to timing and L2 instability.",
+      "symptoms": [
+        "Frequent DHCP deassign/reassign events",
+        "Discover/offer loops",
+        "Same client appears with different MACs"
+      ],
+      "detection_commands": [
+        "/interface ethernet monitor ether1",
+        "/log print where message~\"dhcp\""
+      ],
+      "fix_commands": [
+        "/interface ethernet set ether1 eee=no",
+        "/interface bridge set BR_PPPoE protocol-mode=rstp",
+        "/interface bridge port set [find] ingress-filtering=yes"
+      ],
+      "reasoning_tags": [
+        "dhcp",
+        "eee",
+        "timing",
+        "layer2",
+        "stability"
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Splynx Blocking / Access Issues",
+      "problem": "Users are blocked or lose access due to Splynx address list or firewall chain issues.",
+      "symptoms": [
+        "Customer authenticated but no internet",
+        "Unexpected blocked state",
+        "Address-list mismatch"
+      ],
+      "detection_commands": [
+        "/ip firewall address-list print where list~\"SpLBL\"",
+        "/ip firewall filter print where comment~\"Splynx\"",
+        "/ppp active print"
+      ],
+      "fix_commands": [
+        "/ip firewall filter move [find comment=\"SpBlockingRule\"] destination=0",
+        "/ip firewall address-list remove [find list=\"SpLBL_blocked\"]"
+      ],
+      "reasoning_tags": [
+        "splynx",
+        "firewall",
+        "pppoe",
+        "address-list"
+      ]
+    },
+    {
+      "id": 4,
+      "title": "PPPoE Discovery Issues / Session Failures",
+      "problem": "Clients fail to establish PPPoE sessions due to binding, MTU, or VLAN problems.",
+      "symptoms": [
+        "Discovery visible but no session",
+        "Intermittent PPPoE login success",
+        "Clients cannot authenticate"
+      ],
+      "detection_commands": [
+        "/tool sniffer quick interface=vlan20-cx port=pppoe-discovery",
+        "/ppp active print",
+        "/interface bridge port print"
+      ],
+      "fix_commands": [
+        "/interface pppoe-server server set service-name=SplynxRadius interface=vlan20-cx",
+        "/ppp profile set splynx_pppoe mtu=1480 mru=1480"
+      ],
+      "reasoning_tags": [
+        "pppoe",
+        "mtu",
+        "vlan",
+        "authentication"
+      ]
+    },
+    {
+      "id": 5,
+      "title": "VLAN Misconfiguration / Traffic Bleeding",
+      "problem": "Traffic crosses between mgmt, customer, and security networks due to bad VLAN definitions.",
+      "symptoms": [
+        "Management network reachable from customer side",
+        "Unexpected ARP visibility",
+        "Cross-network traffic"
+      ],
+      "detection_commands": [
+        "/interface bridge vlan print",
+        "/ip arp print"
+      ],
+      "fix_commands": [
+        "/interface bridge vlan add bridge=BR_PPPoE vlan-ids=10 tagged=bridge,ether1",
+        "/interface bridge vlan add bridge=BR_PPPoE vlan-ids=20 tagged=bridge,ether1",
+        "/interface bridge vlan add bridge=BR_PPPoE vlan-ids=30 tagged=bridge,ether1",
+        "/interface bridge port set etherX pvid=20"
+      ],
+      "reasoning_tags": [
+        "vlan",
+        "layer2",
+        "bridge",
+        "segmentation"
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Loop / Broadcast Storm Issues",
+      "problem": "Network instability caused by L2 loops and excessive flooding.",
+      "symptoms": [
+        "High CPU",
+        "MAC flapping",
+        "Instability across bridge domain"
+      ],
+      "detection_commands": [
+        "/interface bridge host print",
+        "/tool torch interface=bridge"
+      ],
+      "fix_commands": [
+        "/interface bridge set BR_PPPoE protocol-mode=rstp",
+        "/interface bridge port set [find] bpdu-guard=yes",
+        "/interface ethernet set etherX loop-protect=on"
+      ],
+      "reasoning_tags": [
+        "loop",
+        "broadcast-storm",
+        "rstp",
+        "bridge"
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Wireless Backhaul / Bridge Path Issues",
+      "problem": "Traffic fails across wireless backhaul because the path is treated as L2 when it is actually L3.",
+      "symptoms": [
+        "Packet loss across cnWave/Siklu",
+        "Traffic not flowing as expected",
+        "Route confusion over wireless mesh"
+      ],
+      "detection_commands": [
+        "/tool traceroute 8.8.8.8",
+        "/ip route print"
+      ],
+      "fix_commands": [
+        "/ip route add dst-address=X.X.X.X/XX gateway=Y.Y.Y.Y"
+      ],
+      "reasoning_tags": [
+        "wireless-backhaul",
+        "routing",
+        "cnwave",
+        "siklu",
+        "layer3"
+      ]
+    },
+    {
+      "id": 8,
+      "title": "MAC Address Inconsistencies",
+      "problem": "Same client appears under multiple MAC identities due to retry behavior and path instability.",
+      "symptoms": [
+        "Different MACs for same client",
+        "Inconsistent authentication identity",
+        "Confusing sniffer results"
+      ],
+      "detection_commands": [
+        "/tool sniffer quick"
+      ],
+      "fix_commands": [],
+      "reasoning_tags": [
+        "mac",
+        "timing",
+        "dhcp",
+        "pppoe",
+        "layer2"
+      ],
+      "notes": "Often not a rogue device. Can be caused by DHCP/PPPoE retry behavior and unstable packet timing."
+    },
+    {
+      "id": 9,
+      "title": "LTE Data Usage / ZeroTier Overhead",
+      "problem": "Unexpected cellular usage caused by overlay management traffic.",
+      "symptoms": [
+        "LTE consumption high while mostly idle",
+        "Persistent overhead on OOB link"
+      ],
+      "detection_commands": [
+        "/tool torch interface=lte1",
+        "/ip firewall connection print where dst-port=9993",
+        "/interface monitor-traffic lte1"
+      ],
+      "fix_commands": [
+        "/queue simple add name=lte-limit target=lte1 max-limit=500k/500k"
+      ],
+      "reasoning_tags": [
+        "lte",
+        "zerotier",
+        "oob",
+        "bandwidth"
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Hardware Offloading Issues",
+      "problem": "CRS or bridge switching falls back to CPU instead of hardware forwarding.",
+      "symptoms": [
+        "High CPU on switch",
+        "Poor throughput"
+      ],
+      "detection_commands": [
+        "/interface bridge port print"
+      ],
+      "fix_commands": [
+        "Confirm the bridge design matches the switch-chip offload model and look for the H flag on /interface bridge port print",
+        "Remove offload blockers such as unsupported bridge features, then re-check the affected ports instead of trying to set a generic hw=yes knob"
+      ],
+      "reasoning_tags": [
+        "crs",
+        "hardware-offload",
+        "bridge",
+        "performance"
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Option 82 / DHCP Architecture Testing",
+      "problem": "Migration from PPPoE to DHCP with relay and Option 82 insertion.",
+      "symptoms": [
+        "Need port/site identity in DHCP requests",
+        "Need DHCP-based subscriber control"
+      ],
+      "detection_commands": [
+        "/ip dhcp-relay print"
+      ],
+      "fix_commands": [
+        "/interface bridge settings set use-ip-firewall=yes",
+        "/ip dhcp-relay add interface=vlan20 dhcp-server=X.X.X.X add-relay-info=yes"
+      ],
+      "reasoning_tags": [
+        "option82",
+        "dhcp-relay",
+        "migration",
+        "subscriber-management"
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Firewall / HTTPS Blocking",
+      "problem": "Need to block HTTPS destinations like YouTube using TLS host matching.",
+      "symptoms": [
+        "Need domain-based block for HTTPS"
+      ],
+      "detection_commands": [
+        "/ip firewall filter print"
+      ],
+      "fix_commands": [
+        "/ip firewall filter add chain=forward tls-host=*.youtube.com action=drop"
+      ],
+      "reasoning_tags": [
+        "firewall",
+        "tls-host",
+        "content-filtering"
+      ]
+    },
+    {
+      "id": 13,
+      "title": "General Debug Toolkit",
+      "problem": "Core diagnostic command set for MikroTik troubleshooting.",
+      "symptoms": [
+        "Need quick visibility into live state"
+      ],
+      "detection_commands": [
+        "/tool sniffer quick",
+        "/tool torch",
+        "/ip firewall connection print",
+        "/interface bridge host print",
+        "/ip route print",
+        "/ip arp print",
+        "/log print",
+        "/interface ethernet monitor"
+      ],
+      "fix_commands": [],
+      "reasoning_tags": [
+        "toolkit",
+        "debug",
+        "baseline"
+      ]
+    },
+    {
+      "id": 14,
+      "title": "Interface Flapping / Link Instability",
+      "problem": "Link repeatedly drops and returns due to negotiation problems.",
+      "symptoms": [
+        "Interface up/down events",
+        "Packet loss spikes"
+      ],
+      "detection_commands": [
+        "/interface monitor-traffic ether1",
+        "/log print where message~\"link\""
+      ],
+      "fix_commands": [
+        "/interface ethernet set ether1 auto-negotiation=no speed=1Gbps full-duplex=yes"
+      ],
+      "reasoning_tags": [
+        "ethernet",
+        "link",
+        "autoneg",
+        "physical-layer"
+      ]
+    },
+    {
+      "id": 15,
+      "title": "Bridge Misbinding",
+      "problem": "Expected traffic does not pass because an interface is not actually in the bridge.",
+      "symptoms": [
+        "No forwarding on expected port"
+      ],
+      "detection_commands": [
+        "/interface bridge port print"
+      ],
+      "fix_commands": [
+        "/interface bridge port add bridge=BR_PPPoE interface=etherX"
+      ],
+      "reasoning_tags": [
+        "bridge",
+        "membership",
+        "layer2"
+      ]
+    },
+    {
+      "id": 16,
+      "title": "ARP Table Overflow / Instability",
+      "problem": "Neighbor table limits contribute to instability in larger L2 domains.",
+      "symptoms": [
+        "Connectivity drops",
+        "ARP churn"
+      ],
+      "detection_commands": [
+        "/ip arp print count-only"
+      ],
+      "fix_commands": [
+        "/ip settings set max-neighbor-entries=8192"
+      ],
+      "reasoning_tags": [
+        "arp",
+        "neighbor-table",
+        "scale"
+      ]
+    },
+    {
+      "id": 17,
+      "title": "MTU Blackhole",
+      "problem": "Large packets are silently dropped, breaking some traffic but not all.",
+      "symptoms": [
+        "Some websites load, others stall",
+        "Large packets fail"
+      ],
+      "detection_commands": [
+        "/ping 8.8.8.8 size=1472 do-not-fragment=yes"
+      ],
+      "fix_commands": [
+        "/interface ethernet set ether1 mtu=1500",
+        "/interface vlan set vlan20 mtu=1500"
+      ],
+      "reasoning_tags": [
+        "mtu",
+        "fragmentation",
+        "path-mtu"
+      ]
+    },
+    {
+      "id": 18,
+      "title": "FastTrack Breaking QoS / Visibility",
+      "problem": "FastTrack bypasses queues and hides traffic from normal inspection paths.",
+      "symptoms": [
+        "Queue rules appear ineffective",
+        "Traffic bypasses firewall accounting"
+      ],
+      "detection_commands": [
+        "/ip firewall filter print where action=fasttrack-connection"
+      ],
+      "fix_commands": [
+        "/ip firewall filter disable [find action=fasttrack-connection]"
+      ],
+      "reasoning_tags": [
+        "fasttrack",
+        "qos",
+        "firewall",
+        "visibility"
+      ]
+    },
+    {
+      "id": 19,
+      "title": "Queue Tree Not Applying",
+      "problem": "Queue tree configuration exists but does not classify traffic as intended.",
+      "symptoms": [
+        "Bandwidth limits ignored"
+      ],
+      "detection_commands": [
+        "/queue tree print stats"
+      ],
+      "fix_commands": [
+        "/queue tree set [find where name=\"QUEUE_NAME\"] parent=global"
+      ],
+      "reasoning_tags": [
+        "queue-tree",
+        "qos",
+        "bandwidth"
+      ]
+    },
+    {
+      "id": 20,
+      "title": "SFP Module Not Recognized",
+      "problem": "Fiber or copper SFP link does not come up as expected.",
+      "symptoms": [
+        "SFP port stays down"
+      ],
+      "detection_commands": [
+        "/interface ethernet monitor sfp-sfpplus1"
+      ],
+      "fix_commands": [
+        "/interface ethernet set sfp-sfpplus1 auto-negotiation=no"
+      ],
+      "reasoning_tags": [
+        "sfp",
+        "fiber",
+        "autoneg",
+        "physical-layer"
+      ]
+    },
+    {
+      "id": 21,
+      "title": "NAT Not Working",
+      "problem": "Clients have private connectivity but cannot reach the internet due to missing or broken srcnat.",
+      "symptoms": [
+        "Clients get IP but no internet"
+      ],
+      "detection_commands": [
+        "/ip firewall nat print"
+      ],
+      "fix_commands": [
+        "/ip firewall nat add chain=srcnat out-interface=ether1 action=masquerade"
+      ],
+      "reasoning_tags": [
+        "nat",
+        "internet-access",
+        "srcnat"
+      ]
+    },
+    {
+      "id": 22,
+      "title": "Connection Tracking Saturation",
+      "problem": "Conntrack table fills and causes performance or session problems.",
+      "symptoms": [
+        "High CPU",
+        "Dropped sessions",
+        "Large connection count"
+      ],
+      "detection_commands": [
+        "/ip firewall connection print count-only"
+      ],
+      "fix_commands": [
+        "/ip firewall connection tracking set max-entries=262144"
+      ],
+      "reasoning_tags": [
+        "conntrack",
+        "scale",
+        "performance"
+      ]
+    },
+    {
+      "id": 23,
+      "title": "Incorrect Default Route",
+      "problem": "No outbound connectivity because default route is missing or wrong.",
+      "symptoms": [
+        "No internet",
+        "Ping to local gateway works but beyond does not"
+      ],
+      "detection_commands": [
+        "/ip route print where dst-address=0.0.0.0/0"
+      ],
+      "fix_commands": [
+        "/ip route add dst-address=0.0.0.0/0 gateway=X.X.X.X"
+      ],
+      "reasoning_tags": [
+        "routing",
+        "default-route",
+        "internet-access"
+      ]
+    },
+    {
+      "id": 24,
+      "title": "Asymmetric Routing",
+      "problem": "Traffic exits one way and returns another, breaking stateful flows.",
+      "symptoms": [
+        "Connection starts but fails",
+        "No return traffic"
+      ],
+      "detection_commands": [
+        "/tool traceroute"
+      ],
+      "fix_commands": [
+        "/ip route rule add src-address=SUBNET action=lookup table=main"
+      ],
+      "reasoning_tags": [
+        "routing",
+        "policy-routing",
+        "asymmetric"
+      ]
+    },
+    {
+      "id": 25,
+      "title": "DNS Not Resolving",
+      "problem": "Internet reachable by IP but not by domain due to DNS configuration issues.",
+      "symptoms": [
+        "IP connectivity works",
+        "Names do not resolve"
+      ],
+      "detection_commands": [
+        "/resolve google.com"
+      ],
+      "fix_commands": [
+        "/ip dns set servers=8.8.8.8,1.1.1.1 allow-remote-requests=yes"
+      ],
+      "reasoning_tags": [
+        "dns",
+        "resolution",
+        "internet-access"
+      ]
+    },
+    {
+      "id": 26,
+      "title": "CPU Spikes from Broadcast Storm",
+      "problem": "Broadcast flooding drives CPU and degrades switching performance.",
+      "symptoms": [
+        "High CPU on bridge",
+        "Flooding behavior"
+      ],
+      "detection_commands": [
+        "/tool profile"
+      ],
+      "fix_commands": [
+        "/interface bridge port set [find] broadcast-flood=no"
+      ],
+      "reasoning_tags": [
+        "broadcast",
+        "cpu",
+        "bridge"
+      ]
+    },
+    {
+      "id": 27,
+      "title": "Management Access Exposed",
+      "problem": "Administrative services are reachable from untrusted networks.",
+      "symptoms": [
+        "Router accessible from public internet"
+      ],
+      "detection_commands": [
+        "/ip service print"
+      ],
+      "fix_commands": [
+        "/ip service set winbox address=192.168.0.0/16",
+        "/ip firewall filter add chain=input in-interface=ether1 action=drop"
+      ],
+      "reasoning_tags": [
+        "security",
+        "management-plane",
+        "firewall"
+      ]
+    },
+    {
+      "id": 28,
+      "title": "Packet Fragmentation Issues",
+      "problem": "Large TCP sessions break due to MTU/MSS mismatch.",
+      "symptoms": [
+        "VPN or HTTPS instability",
+        "Large transfers fail"
+      ],
+      "detection_commands": [
+        "/ip firewall mangle print"
+      ],
+      "fix_commands": [
+        "/ip firewall mangle add chain=forward action=change-mss new-mss=clamp-to-pmtu protocol=tcp tcp-flags=syn"
+      ],
+      "reasoning_tags": [
+        "mss",
+        "fragmentation",
+        "vpn",
+        "tcp"
+      ]
+    },
+    {
+      "id": 29,
+      "title": "Duplicate IP Addresses",
+      "problem": "Two devices compete for the same address, causing ARP instability.",
+      "symptoms": [
+        "ARP conflicts",
+        "Intermittent reachability"
+      ],
+      "detection_commands": [
+        "/ip arp print where dynamic=yes"
+      ],
+      "fix_commands": [
+        "/ip dhcp-server set [find] authoritative=yes"
+      ],
+      "reasoning_tags": [
+        "duplicate-ip",
+        "arp",
+        "dhcp"
+      ]
+    },
+    {
+      "id": 30,
+      "title": "Route Flapping",
+      "problem": "Dynamic routes repeatedly appear and disappear, causing path instability.",
+      "symptoms": [
+        "Routes flap",
+        "Intermittent reachability"
+      ],
+      "detection_commands": [
+        "/routing route print"
+      ],
+      "fix_commands": [
+        "/routing ospf interface-template set [find where interfaces=ether1] cost=10"
+      ],
+      "reasoning_tags": [
+        "routing",
+        "ospf",
+        "flap"
+      ]
+    },
+    {
+      "id": 31,
+      "title": "STP Blocking Wrong Port",
+      "problem": "Bridge protocol selects the wrong forwarding path.",
+      "symptoms": [
+        "Traffic blackhole",
+        "Unexpected blocked port"
+      ],
+      "detection_commands": [
+        "/interface bridge port print"
+      ],
+      "fix_commands": [
+        "/interface bridge port set etherX priority=0x10"
+      ],
+      "reasoning_tags": [
+        "stp",
+        "rstp",
+        "bridge",
+        "path-selection"
+      ]
+    },
+    {
+      "id": 32,
+      "title": "Wireless Interface Not Passing Traffic",
+      "problem": "Client or AP associates, but data does not bridge correctly.",
+      "symptoms": [
+        "Associated but no user traffic"
+      ],
+      "detection_commands": [
+        "/interface wireless registration-table print"
+      ],
+      "fix_commands": [
+        "Verify the active wireless package and datapath/bridge binding for that interface before changing anything; do not assume legacy bridge-mode applies on every RouterOS 7.18+ wireless stack"
+      ],
+      "reasoning_tags": [
+        "wireless",
+        "bridge-mode",
+        "access"
+      ]
+    },
+    {
+      "id": 33,
+      "title": "Firewall Dropping Legit Traffic",
+      "problem": "Rule order or broad match conditions block valid flows.",
+      "symptoms": [
+        "Unexpected packet drops"
+      ],
+      "detection_commands": [
+        "/ip firewall filter print stats"
+      ],
+      "fix_commands": [
+        "/ip firewall filter move [find] destination=0"
+      ],
+      "reasoning_tags": [
+        "firewall",
+        "rule-order",
+        "drops"
+      ]
+    },
+    {
+      "id": 34,
+      "title": "Bridge Horizon Misuse",
+      "problem": "Ports are isolated from each other due to inappropriate bridge horizon settings.",
+      "symptoms": [
+        "Ports cannot reach each other when they should"
+      ],
+      "detection_commands": [
+        "/interface bridge port print"
+      ],
+      "fix_commands": [
+        "/interface bridge port set [find] horizon=none"
+      ],
+      "reasoning_tags": [
+        "bridge",
+        "horizon",
+        "isolation"
+      ]
+    },
+    {
+      "id": 35,
+      "title": "Invalid RADIUS Authentication",
+      "problem": "RADIUS settings prevent PPPoE authentication from succeeding.",
+      "symptoms": [
+        "PPPoE login failures",
+        "RADIUS timeout or reject messages"
+      ],
+      "detection_commands": [
+        "/log print where message~\"radius\""
+      ],
+      "fix_commands": [
+        "/radius set address=X.X.X.X secret=YOUR_SECRET"
+      ],
+      "reasoning_tags": [
+        "radius",
+        "pppoe",
+        "authentication"
+      ]
+    },
+    {
+      "id": 36,
+      "title": "VLAN Not Tagged on Uplink",
+      "problem": "Expected VLAN does not traverse the uplink because it is missing from the bridge VLAN table.",
+      "symptoms": [
+        "No upstream connectivity for one VLAN"
+      ],
+      "detection_commands": [
+        "/interface bridge vlan print"
+      ],
+      "fix_commands": [
+        "/interface bridge vlan add bridge=BR_PPPoE tagged=ether1 vlan-ids=20"
+      ],
+      "reasoning_tags": [
+        "vlan",
+        "uplink",
+        "tagging"
+      ]
+    },
+    {
+      "id": 37,
+      "title": "DHCP Relay Not Working",
+      "problem": "Relay exists but does not pass enough metadata or requests do not reach server correctly.",
+      "symptoms": [
+        "No DHCP leases via relay"
+      ],
+      "detection_commands": [
+        "/ip dhcp-relay print"
+      ],
+      "fix_commands": [
+        "/ip dhcp-relay set [find] add-relay-info=yes"
+      ],
+      "reasoning_tags": [
+        "dhcp-relay",
+        "option82",
+        "relay-info"
+      ]
+    },
+    {
+      "id": 38,
+      "title": "Interface Queue Drops",
+      "problem": "Software queues or poor queue configuration cause packet loss under load.",
+      "symptoms": [
+        "Drops during high traffic"
+      ],
+      "detection_commands": [
+        "/interface monitor-traffic ether1"
+      ],
+      "fix_commands": [
+        "/queue interface set ether1 queue=only-hardware-queue"
+      ],
+      "reasoning_tags": [
+        "queue",
+        "drops",
+        "performance"
+      ]
+    },
+    {
+      "id": 39,
+      "title": "Power Issues on PoE Port",
+      "problem": "Connected device does not boot due to PoE delivery settings.",
+      "symptoms": [
+        "Device not powering up"
+      ],
+      "detection_commands": [
+        "/interface ethernet poe print"
+      ],
+      "fix_commands": [
+        "/interface ethernet poe set etherX poe-out=forced-on"
+      ],
+      "reasoning_tags": [
+        "poe",
+        "power",
+        "physical-layer"
+      ]
+    },
+    {
+      "id": 40,
+      "title": "Neighbor Discovery Noise",
+      "problem": "Discovery protocols create unnecessary traffic or exposure on inappropriate interfaces.",
+      "symptoms": [
+        "Excessive discovery chatter"
+      ],
+      "detection_commands": [
+        "/ip neighbor discovery-settings print"
+      ],
+      "fix_commands": [
+        "/ip neighbor discovery-settings set discover-interface-list=none"
+      ],
+      "reasoning_tags": [
+        "discovery",
+        "mndp",
+        "lldp",
+        "noise"
+      ]
+    }
+  ],
+  "log_parsing_module": {
+    "purpose": "Teach the model to parse MikroTik live and historical logs using /log print where ... patterns.",
+    "core_patterns": [
+      {
+        "goal": "Show DHCP-related events",
+        "command": "/log print where message~\"dhcp\""
+      },
+      {
+        "goal": "Show PPPoE-related events",
+        "command": "/log print where message~\"pppoe\""
+      },
+      {
+        "goal": "Show interface link changes",
+        "command": "/log print where message~\"link\""
+      },
+      {
+        "goal": "Show RADIUS issues",
+        "command": "/log print where message~\"radius\""
+      },
+      {
+        "goal": "Show bridge or STP events",
+        "command": "/log print where message~\"bridge|rstp|stp\""
+      },
+      {
+        "goal": "Show firewall actions or drops",
+        "command": "/log print where topics~\"firewall\" or message~\"drop\""
+      },
+      {
+        "goal": "Show login/authentication activity",
+        "command": "/log print where message~\"login|logged|authentication|failed\""
+      },
+      {
+        "goal": "Show route changes",
+        "command": "/log print where message~\"route|ospf|bgp\""
+      },
+      {
+        "goal": "Show only recent warnings and errors",
+        "command": "/log print where topics~\"warning|error|critical\""
+      },
+      {
+        "goal": "Show entries from a given interface name",
+        "command": "/log print where message~\"ether1|sfp-sfpplus1|vlan20-cx\""
+      }
+    ],
+    "reasoning_rules": [
+      "Start broad, then narrow. Example: first /log print where message~\"dhcp\", then search for a client MAC, interface name, or IP.",
+      "Correlate log lines with sniffer, torch, route, ARP, and bridge host output rather than trusting logs alone.",
+      "Treat repeated deassign/reassign, link up/down, and authentication retries as timing or L2 instability signals.",
+      "For subscriber issues, search logs by PPPoE username, RADIUS, DHCP lease IP, MAC, interface, and VLAN name.",
+      "Look for sequence patterns: interface flap -> DHCP retry -> alternate MAC or auth failure."
+    ],
+    "example_queries": [
+      {
+        "input": "Customer keeps losing IP every few minutes",
+        "commands": [
+          "/log print where message~\"dhcp\"",
+          "/log print where message~\"deassigned|assigned|expired\"",
+          "/interface ethernet monitor ether1",
+          "/tool sniffer quick interface=BR-CGNAT port=67,68 ip-protocol=udp"
+        ]
+      },
+      {
+        "input": "PPPoE session will not come up",
+        "commands": [
+          "/log print where message~\"pppoe\"",
+          "/log print where message~\"radius\"",
+          "/tool sniffer quick interface=vlan20-cx port=pppoe-discovery",
+          "/ppp active print"
+        ]
+      },
+      {
+        "input": "Port keeps dropping all day",
+        "commands": [
+          "/log print where message~\"link\"",
+          "/interface ethernet monitor ether1",
+          "/interface monitor-traffic ether1"
+        ]
+      }
+    ]
+  },
+  "training_examples": [
+    {
+      "instruction": "Troubleshoot MikroTik issue: Rogue DHCP Servers / DHCP Leakage",
+      "context": {
+        "problem": "Clients receive wrong IP ranges or inconsistent leases due to rogue DHCP and VLAN leakage.",
+        "symptoms": [
+          "Clients get unexpected 192.168.x.x addresses",
+          "DHCP offers appear on customer VLANs",
+          "Random lease flapping"
+        ],
+        "reasoning_tags": [
+          "dhcp",
+          "rogue-server",
+          "vlan-leakage",
+          "layer2"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/tool sniffer quick interface=BR-CGNAT port=67,68 ip-protocol=udp",
+          "/ip dhcp-server lease print",
+          "/tool torch interface=BR-CGNAT port=67,68"
+        ],
+        "fix_commands": [
+          "/ip firewall filter add chain=forward protocol=udp dst-port=67-68 action=drop comment=\"Block rogue DHCP\"",
+          "/ip firewall filter add chain=forward src-address-list=!trusted_dhcp_servers protocol=udp dst-port=67-68 action=drop",
+          "/interface bridge set BR_PPPoE vlan-filtering=yes",
+          "/interface bridge vlan add bridge=BR_PPPoE tagged=bridge,etherX vlan-ids=20"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: DHCP Flapping / Reassigning IPs",
+      "context": {
+        "problem": "Clients continuously renew or appear to re-identify due to timing and L2 instability.",
+        "symptoms": [
+          "Frequent DHCP deassign/reassign events",
+          "Discover/offer loops",
+          "Same client appears with different MACs"
+        ],
+        "reasoning_tags": [
+          "dhcp",
+          "eee",
+          "timing",
+          "layer2",
+          "stability"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/interface ethernet monitor ether1",
+          "/log print where message~\"dhcp\""
+        ],
+        "fix_commands": [
+          "/interface ethernet set ether1 eee=no",
+          "/interface bridge set BR_PPPoE protocol-mode=rstp",
+          "/interface bridge port set [find] ingress-filtering=yes"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Splynx Blocking / Access Issues",
+      "context": {
+        "problem": "Users are blocked or lose access due to Splynx address list or firewall chain issues.",
+        "symptoms": [
+          "Customer authenticated but no internet",
+          "Unexpected blocked state",
+          "Address-list mismatch"
+        ],
+        "reasoning_tags": [
+          "splynx",
+          "firewall",
+          "pppoe",
+          "address-list"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/ip firewall address-list print where list~\"SpLBL\"",
+          "/ip firewall filter print where comment~\"Splynx\"",
+          "/ppp active print"
+        ],
+        "fix_commands": [
+          "/ip firewall filter move [find comment=\"SpBlockingRule\"] destination=0",
+          "/ip firewall address-list remove [find list=\"SpLBL_blocked\"]"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: PPPoE Discovery Issues / Session Failures",
+      "context": {
+        "problem": "Clients fail to establish PPPoE sessions due to binding, MTU, or VLAN problems.",
+        "symptoms": [
+          "Discovery visible but no session",
+          "Intermittent PPPoE login success",
+          "Clients cannot authenticate"
+        ],
+        "reasoning_tags": [
+          "pppoe",
+          "mtu",
+          "vlan",
+          "authentication"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/tool sniffer quick interface=vlan20-cx port=pppoe-discovery",
+          "/ppp active print",
+          "/interface bridge port print"
+        ],
+        "fix_commands": [
+          "/interface pppoe-server server set service-name=SplynxRadius interface=vlan20-cx",
+          "/ppp profile set splynx_pppoe mtu=1480 mru=1480"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: VLAN Misconfiguration / Traffic Bleeding",
+      "context": {
+        "problem": "Traffic crosses between mgmt, customer, and security networks due to bad VLAN definitions.",
+        "symptoms": [
+          "Management network reachable from customer side",
+          "Unexpected ARP visibility",
+          "Cross-network traffic"
+        ],
+        "reasoning_tags": [
+          "vlan",
+          "layer2",
+          "bridge",
+          "segmentation"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/interface bridge vlan print",
+          "/ip arp print"
+        ],
+        "fix_commands": [
+          "/interface bridge vlan add bridge=BR_PPPoE vlan-ids=10 tagged=bridge,ether1",
+          "/interface bridge vlan add bridge=BR_PPPoE vlan-ids=20 tagged=bridge,ether1",
+          "/interface bridge vlan add bridge=BR_PPPoE vlan-ids=30 tagged=bridge,ether1",
+          "/interface bridge port set etherX pvid=20"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Loop / Broadcast Storm Issues",
+      "context": {
+        "problem": "Network instability caused by L2 loops and excessive flooding.",
+        "symptoms": [
+          "High CPU",
+          "MAC flapping",
+          "Instability across bridge domain"
+        ],
+        "reasoning_tags": [
+          "loop",
+          "broadcast-storm",
+          "rstp",
+          "bridge"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/interface bridge host print",
+          "/tool torch interface=bridge"
+        ],
+        "fix_commands": [
+          "/interface bridge set BR_PPPoE protocol-mode=rstp",
+          "/interface bridge port set [find] bpdu-guard=yes",
+          "/interface ethernet set etherX loop-protect=on"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Wireless Backhaul / Bridge Path Issues",
+      "context": {
+        "problem": "Traffic fails across wireless backhaul because the path is treated as L2 when it is actually L3.",
+        "symptoms": [
+          "Packet loss across cnWave/Siklu",
+          "Traffic not flowing as expected",
+          "Route confusion over wireless mesh"
+        ],
+        "reasoning_tags": [
+          "wireless-backhaul",
+          "routing",
+          "cnwave",
+          "siklu",
+          "layer3"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/tool traceroute 8.8.8.8",
+          "/ip route print"
+        ],
+        "fix_commands": [
+          "/ip route add dst-address=X.X.X.X/XX gateway=Y.Y.Y.Y"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: MAC Address Inconsistencies",
+      "context": {
+        "problem": "Same client appears under multiple MAC identities due to retry behavior and path instability.",
+        "symptoms": [
+          "Different MACs for same client",
+          "Inconsistent authentication identity",
+          "Confusing sniffer results"
+        ],
+        "reasoning_tags": [
+          "mac",
+          "timing",
+          "dhcp",
+          "pppoe",
+          "layer2"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/tool sniffer quick"
+        ],
+        "fix_commands": [],
+        "notes": "Often not a rogue device. Can be caused by DHCP/PPPoE retry behavior and unstable packet timing."
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: LTE Data Usage / ZeroTier Overhead",
+      "context": {
+        "problem": "Unexpected cellular usage caused by overlay management traffic.",
+        "symptoms": [
+          "LTE consumption high while mostly idle",
+          "Persistent overhead on OOB link"
+        ],
+        "reasoning_tags": [
+          "lte",
+          "zerotier",
+          "oob",
+          "bandwidth"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/tool torch interface=lte1",
+          "/ip firewall connection print where dst-port=9993",
+          "/interface monitor-traffic lte1"
+        ],
+        "fix_commands": [
+          "/queue simple add name=lte-limit target=lte1 max-limit=500k/500k"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Hardware Offloading Issues",
+      "context": {
+        "problem": "CRS or bridge switching falls back to CPU instead of hardware forwarding.",
+        "symptoms": [
+          "High CPU on switch",
+          "Poor throughput"
+        ],
+        "reasoning_tags": [
+          "crs",
+          "hardware-offload",
+          "bridge",
+          "performance"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/interface bridge port print"
+        ],
+        "fix_commands": [
+          "/interface bridge set BR_PPPoE hw-offload=yes",
+          "/interface bridge port set [find] hw=yes"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Option 82 / DHCP Architecture Testing",
+      "context": {
+        "problem": "Migration from PPPoE to DHCP with relay and Option 82 insertion.",
+        "symptoms": [
+          "Need port/site identity in DHCP requests",
+          "Need DHCP-based subscriber control"
+        ],
+        "reasoning_tags": [
+          "option82",
+          "dhcp-relay",
+          "migration",
+          "subscriber-management"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/ip dhcp-relay print"
+        ],
+        "fix_commands": [
+          "/interface bridge settings set use-ip-firewall=yes",
+          "/ip dhcp-relay add interface=vlan20 dhcp-server=X.X.X.X add-relay-info=yes"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Firewall / HTTPS Blocking",
+      "context": {
+        "problem": "Need to block HTTPS destinations like YouTube using TLS host matching.",
+        "symptoms": [
+          "Need domain-based block for HTTPS"
+        ],
+        "reasoning_tags": [
+          "firewall",
+          "tls-host",
+          "content-filtering"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/ip firewall filter print"
+        ],
+        "fix_commands": [
+          "/ip firewall filter add chain=forward tls-host=*.youtube.com action=drop"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: General Debug Toolkit",
+      "context": {
+        "problem": "Core diagnostic command set for MikroTik troubleshooting.",
+        "symptoms": [
+          "Need quick visibility into live state"
+        ],
+        "reasoning_tags": [
+          "toolkit",
+          "debug",
+          "baseline"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/tool sniffer quick",
+          "/tool torch",
+          "/ip firewall connection print",
+          "/interface bridge host print",
+          "/ip route print",
+          "/ip arp print",
+          "/log print",
+          "/interface ethernet monitor"
+        ],
+        "fix_commands": [],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Interface Flapping / Link Instability",
+      "context": {
+        "problem": "Link repeatedly drops and returns due to negotiation problems.",
+        "symptoms": [
+          "Interface up/down events",
+          "Packet loss spikes"
+        ],
+        "reasoning_tags": [
+          "ethernet",
+          "link",
+          "autoneg",
+          "physical-layer"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/interface monitor-traffic ether1",
+          "/log print where message~\"link\""
+        ],
+        "fix_commands": [
+          "/interface ethernet set ether1 auto-negotiation=no speed=1Gbps full-duplex=yes"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Bridge Misbinding",
+      "context": {
+        "problem": "Expected traffic does not pass because an interface is not actually in the bridge.",
+        "symptoms": [
+          "No forwarding on expected port"
+        ],
+        "reasoning_tags": [
+          "bridge",
+          "membership",
+          "layer2"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/interface bridge port print"
+        ],
+        "fix_commands": [
+          "/interface bridge port add bridge=BR_PPPoE interface=etherX"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: ARP Table Overflow / Instability",
+      "context": {
+        "problem": "Neighbor table limits contribute to instability in larger L2 domains.",
+        "symptoms": [
+          "Connectivity drops",
+          "ARP churn"
+        ],
+        "reasoning_tags": [
+          "arp",
+          "neighbor-table",
+          "scale"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/ip arp print count-only"
+        ],
+        "fix_commands": [
+          "/ip settings set max-neighbor-entries=8192"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: MTU Blackhole",
+      "context": {
+        "problem": "Large packets are silently dropped, breaking some traffic but not all.",
+        "symptoms": [
+          "Some websites load, others stall",
+          "Large packets fail"
+        ],
+        "reasoning_tags": [
+          "mtu",
+          "fragmentation",
+          "path-mtu"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/ping 8.8.8.8 size=1472 do-not-fragment=yes"
+        ],
+        "fix_commands": [
+          "/interface ethernet set ether1 mtu=1500",
+          "/interface vlan set vlan20 mtu=1500"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: FastTrack Breaking QoS / Visibility",
+      "context": {
+        "problem": "FastTrack bypasses queues and hides traffic from normal inspection paths.",
+        "symptoms": [
+          "Queue rules appear ineffective",
+          "Traffic bypasses firewall accounting"
+        ],
+        "reasoning_tags": [
+          "fasttrack",
+          "qos",
+          "firewall",
+          "visibility"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/ip firewall filter print where action=fasttrack-connection"
+        ],
+        "fix_commands": [
+          "/ip firewall filter disable [find action=fasttrack-connection]"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Queue Tree Not Applying",
+      "context": {
+        "problem": "Queue tree configuration exists but does not classify traffic as intended.",
+        "symptoms": [
+          "Bandwidth limits ignored"
+        ],
+        "reasoning_tags": [
+          "queue-tree",
+          "qos",
+          "bandwidth"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/queue tree print stats"
+        ],
+        "fix_commands": [
+          "/queue tree set parent=global"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: SFP Module Not Recognized",
+      "context": {
+        "problem": "Fiber or copper SFP link does not come up as expected.",
+        "symptoms": [
+          "SFP port stays down"
+        ],
+        "reasoning_tags": [
+          "sfp",
+          "fiber",
+          "autoneg",
+          "physical-layer"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/interface ethernet monitor sfp-sfpplus1"
+        ],
+        "fix_commands": [
+          "/interface ethernet set sfp-sfpplus1 auto-negotiation=no"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: NAT Not Working",
+      "context": {
+        "problem": "Clients have private connectivity but cannot reach the internet due to missing or broken srcnat.",
+        "symptoms": [
+          "Clients get IP but no internet"
+        ],
+        "reasoning_tags": [
+          "nat",
+          "internet-access",
+          "srcnat"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/ip firewall nat print"
+        ],
+        "fix_commands": [
+          "/ip firewall nat add chain=srcnat out-interface=ether1 action=masquerade"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Connection Tracking Saturation",
+      "context": {
+        "problem": "Conntrack table fills and causes performance or session problems.",
+        "symptoms": [
+          "High CPU",
+          "Dropped sessions",
+          "Large connection count"
+        ],
+        "reasoning_tags": [
+          "conntrack",
+          "scale",
+          "performance"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/ip firewall connection print count-only"
+        ],
+        "fix_commands": [
+          "/ip firewall connection tracking set max-entries=262144"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Incorrect Default Route",
+      "context": {
+        "problem": "No outbound connectivity because default route is missing or wrong.",
+        "symptoms": [
+          "No internet",
+          "Ping to local gateway works but beyond does not"
+        ],
+        "reasoning_tags": [
+          "routing",
+          "default-route",
+          "internet-access"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/ip route print where dst-address=0.0.0.0/0"
+        ],
+        "fix_commands": [
+          "/ip route add dst-address=0.0.0.0/0 gateway=X.X.X.X"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Asymmetric Routing",
+      "context": {
+        "problem": "Traffic exits one way and returns another, breaking stateful flows.",
+        "symptoms": [
+          "Connection starts but fails",
+          "No return traffic"
+        ],
+        "reasoning_tags": [
+          "routing",
+          "policy-routing",
+          "asymmetric"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/tool traceroute"
+        ],
+        "fix_commands": [
+          "/ip route rule add src-address=SUBNET action=lookup table=main"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: DNS Not Resolving",
+      "context": {
+        "problem": "Internet reachable by IP but not by domain due to DNS configuration issues.",
+        "symptoms": [
+          "IP connectivity works",
+          "Names do not resolve"
+        ],
+        "reasoning_tags": [
+          "dns",
+          "resolution",
+          "internet-access"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/tool dns-update name=google.com"
+        ],
+        "fix_commands": [
+          "/ip dns set servers=8.8.8.8,1.1.1.1 allow-remote-requests=yes"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: CPU Spikes from Broadcast Storm",
+      "context": {
+        "problem": "Broadcast flooding drives CPU and degrades switching performance.",
+        "symptoms": [
+          "High CPU on bridge",
+          "Flooding behavior"
+        ],
+        "reasoning_tags": [
+          "broadcast",
+          "cpu",
+          "bridge"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/tool profile"
+        ],
+        "fix_commands": [
+          "/interface bridge port set [find] broadcast-flood=no"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Management Access Exposed",
+      "context": {
+        "problem": "Administrative services are reachable from untrusted networks.",
+        "symptoms": [
+          "Router accessible from public internet"
+        ],
+        "reasoning_tags": [
+          "security",
+          "management-plane",
+          "firewall"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/ip service print"
+        ],
+        "fix_commands": [
+          "/ip service set winbox address=192.168.0.0/16",
+          "/ip firewall filter add chain=input in-interface=ether1 action=drop"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Packet Fragmentation Issues",
+      "context": {
+        "problem": "Large TCP sessions break due to MTU/MSS mismatch.",
+        "symptoms": [
+          "VPN or HTTPS instability",
+          "Large transfers fail"
+        ],
+        "reasoning_tags": [
+          "mss",
+          "fragmentation",
+          "vpn",
+          "tcp"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/ip firewall mangle print"
+        ],
+        "fix_commands": [
+          "/ip firewall mangle add chain=forward action=change-mss new-mss=clamp-to-pmtu protocol=tcp tcp-flags=syn"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Duplicate IP Addresses",
+      "context": {
+        "problem": "Two devices compete for the same address, causing ARP instability.",
+        "symptoms": [
+          "ARP conflicts",
+          "Intermittent reachability"
+        ],
+        "reasoning_tags": [
+          "duplicate-ip",
+          "arp",
+          "dhcp"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/ip arp print where dynamic=yes"
+        ],
+        "fix_commands": [
+          "/ip dhcp-server set authoritative=yes"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Route Flapping",
+      "context": {
+        "problem": "Dynamic routes repeatedly appear and disappear, causing path instability.",
+        "symptoms": [
+          "Routes flap",
+          "Intermittent reachability"
+        ],
+        "reasoning_tags": [
+          "routing",
+          "ospf",
+          "flap"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/routing route print"
+        ],
+        "fix_commands": [
+          "/routing ospf interface set ether1 cost=10"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: STP Blocking Wrong Port",
+      "context": {
+        "problem": "Bridge protocol selects the wrong forwarding path.",
+        "symptoms": [
+          "Traffic blackhole",
+          "Unexpected blocked port"
+        ],
+        "reasoning_tags": [
+          "stp",
+          "rstp",
+          "bridge",
+          "path-selection"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/interface bridge port print"
+        ],
+        "fix_commands": [
+          "/interface bridge port set etherX priority=0x10"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Wireless Interface Not Passing Traffic",
+      "context": {
+        "problem": "Client or AP associates, but data does not bridge correctly.",
+        "symptoms": [
+          "Associated but no user traffic"
+        ],
+        "reasoning_tags": [
+          "wireless",
+          "bridge-mode",
+          "access"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/interface wireless registration-table print"
+        ],
+        "fix_commands": [
+          "/interface wireless set wlan1 bridge-mode=enabled"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Firewall Dropping Legit Traffic",
+      "context": {
+        "problem": "Rule order or broad match conditions block valid flows.",
+        "symptoms": [
+          "Unexpected packet drops"
+        ],
+        "reasoning_tags": [
+          "firewall",
+          "rule-order",
+          "drops"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/ip firewall filter print stats"
+        ],
+        "fix_commands": [
+          "/ip firewall filter move [find] destination=0"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Bridge Horizon Misuse",
+      "context": {
+        "problem": "Ports are isolated from each other due to inappropriate bridge horizon settings.",
+        "symptoms": [
+          "Ports cannot reach each other when they should"
+        ],
+        "reasoning_tags": [
+          "bridge",
+          "horizon",
+          "isolation"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/interface bridge port print"
+        ],
+        "fix_commands": [
+          "/interface bridge port set [find] horizon=none"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Invalid RADIUS Authentication",
+      "context": {
+        "problem": "RADIUS settings prevent PPPoE authentication from succeeding.",
+        "symptoms": [
+          "PPPoE login failures",
+          "RADIUS timeout or reject messages"
+        ],
+        "reasoning_tags": [
+          "radius",
+          "pppoe",
+          "authentication"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/log print where message~\"radius\""
+        ],
+        "fix_commands": [
+          "/radius set address=X.X.X.X secret=YOUR_SECRET"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: VLAN Not Tagged on Uplink",
+      "context": {
+        "problem": "Expected VLAN does not traverse the uplink because it is missing from the bridge VLAN table.",
+        "symptoms": [
+          "No upstream connectivity for one VLAN"
+        ],
+        "reasoning_tags": [
+          "vlan",
+          "uplink",
+          "tagging"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/interface bridge vlan print"
+        ],
+        "fix_commands": [
+          "/interface bridge vlan add bridge=BR_PPPoE tagged=ether1 vlan-ids=20"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: DHCP Relay Not Working",
+      "context": {
+        "problem": "Relay exists but does not pass enough metadata or requests do not reach server correctly.",
+        "symptoms": [
+          "No DHCP leases via relay"
+        ],
+        "reasoning_tags": [
+          "dhcp-relay",
+          "option82",
+          "relay-info"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/ip dhcp-relay print"
+        ],
+        "fix_commands": [
+          "/ip dhcp-relay set add-relay-info=yes"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Interface Queue Drops",
+      "context": {
+        "problem": "Software queues or poor queue configuration cause packet loss under load.",
+        "symptoms": [
+          "Drops during high traffic"
+        ],
+        "reasoning_tags": [
+          "queue",
+          "drops",
+          "performance"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/interface monitor-traffic ether1"
+        ],
+        "fix_commands": [
+          "/queue interface set ether1 queue=only-hardware-queue"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Power Issues on PoE Port",
+      "context": {
+        "problem": "Connected device does not boot due to PoE delivery settings.",
+        "symptoms": [
+          "Device not powering up"
+        ],
+        "reasoning_tags": [
+          "poe",
+          "power",
+          "physical-layer"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/interface ethernet poe print"
+        ],
+        "fix_commands": [
+          "/interface ethernet poe set etherX poe-out=forced-on"
+        ],
+        "notes": ""
+      }
+    },
+    {
+      "instruction": "Troubleshoot MikroTik issue: Neighbor Discovery Noise",
+      "context": {
+        "problem": "Discovery protocols create unnecessary traffic or exposure on inappropriate interfaces.",
+        "symptoms": [
+          "Excessive discovery chatter"
+        ],
+        "reasoning_tags": [
+          "discovery",
+          "mndp",
+          "lldp",
+          "noise"
+        ]
+      },
+      "expected_output": {
+        "detection_commands": [
+          "/ip neighbor discovery-settings print"
+        ],
+        "fix_commands": [
+          "/ip neighbor discovery-settings set discover-interface-list=none"
+        ],
+        "notes": ""
+      }
+    }
+  ]
+}

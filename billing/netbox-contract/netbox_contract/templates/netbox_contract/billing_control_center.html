@@ -1,0 +1,255 @@
+{% extends 'base/layout.html' %}
+{% load i18n %}
+
+{% block content %}
+<style>
+  .bcc-hero {
+    border: 1px solid var(--bs-border-color);
+    background: linear-gradient(135deg, #0d3b66 0%, #126782 45%, #1f8ea3 100%);
+    border-radius: 14px;
+    color: #f3f8fb;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .bcc-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: .75rem;
+    margin-bottom: 1rem;
+  }
+  .bcc-stat {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 12px;
+    background: var(--bs-body-bg);
+    padding: .9rem;
+  }
+  .bcc-stat h3 {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 650;
+  }
+  .bcc-stat p {
+    margin: 0;
+    color: var(--bs-secondary-color);
+    font-size: .78rem;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+  }
+  .bcc-panel {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 12px;
+    background: var(--bs-body-bg);
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+  .bcc-panel-head {
+    background: color-mix(in srgb, var(--bs-body-bg) 84%, var(--bs-primary) 16%);
+    border-bottom: 1px solid var(--bs-border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .72rem .9rem;
+  }
+  .bcc-panel-head h5 {
+    margin: 0;
+    font-size: .95rem;
+    font-weight: 640;
+  }
+  .bcc-table {
+    width: 100%;
+    font-size: .85rem;
+    margin: 0;
+  }
+  .bcc-table th {
+    color: var(--bs-secondary-color);
+    font-weight: 600;
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .02em;
+    white-space: nowrap;
+  }
+  .bcc-table td, .bcc-table th {
+    padding: .52rem .7rem;
+    border-bottom: 1px solid var(--bs-border-color-translucent);
+  }
+  .bcc-table tr:last-child td {
+    border-bottom: 0;
+  }
+  .bcc-columns {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 1rem;
+  }
+  .bcc-form {
+    padding: .8rem;
+    display: grid;
+    gap: .65rem;
+  }
+  .bcc-form .form-label {
+    margin-bottom: .3rem;
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .02em;
+    color: var(--bs-secondary-color);
+  }
+  @media (max-width: 1200px) {
+    .bcc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .bcc-columns { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 700px) {
+    .bcc-grid { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="container-fluid">
+  <div class="bcc-hero">
+    <h2 class="mb-1">Billing Control Center</h2>
+    <p class="mb-0">
+      NetBox-native billing operations using <strong>Tenancy</strong> (customers) and
+      <strong>netbox-contract</strong> (contracts/invoices), with Stripe sync handled by webhook services.
+    </p>
+  </div>
+
+  <div class="bcc-grid">
+    <div class="bcc-stat"><p>Customers</p><h3>{{ customer_count }}</h3></div>
+    <div class="bcc-stat"><p>Contracts</p><h3>{{ contract_count }}</h3></div>
+    <div class="bcc-stat"><p>Recent Invoices</p><h3>{{ invoice_count }}</h3></div>
+    <div class="bcc-stat"><p>Posted Invoices</p><h3>{{ paid_invoices }}</h3></div>
+  </div>
+
+  <div class="bcc-columns">
+    <div>
+      <section class="bcc-panel">
+        <div class="bcc-panel-head">
+          <h5>Customer Directory (Tenants)</h5>
+          <a class="btn btn-sm btn-primary" href="{% url 'tenancy:tenant_list' %}">Open Tenants</a>
+        </div>
+        <table class="bcc-table">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Contracts</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for customer in customers %}
+            <tr>
+              <td><a href="{{ customer.get_absolute_url }}">{{ customer.name }}</a></td>
+              <td>{{ customer.contract_count }}</td>
+              <td>
+                <a href="{{ customer.get_absolute_url }}">View</a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3">No customers available.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+      <section class="bcc-panel">
+        <div class="bcc-panel-head">
+          <h5>Contracts (Stripe Reference Ready)</h5>
+          <a class="btn btn-sm btn-primary" href="{% url 'plugins:netbox_contract:contract_list' %}">Open Contracts</a>
+        </div>
+        <table class="bcc-table">
+          <thead>
+            <tr>
+              <th>Contract</th>
+              <th>Customer</th>
+              <th>Status</th>
+              <th>Stripe Ref</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for contract in contracts %}
+            <tr>
+              <td><a href="{{ contract.get_absolute_url }}">{{ contract.name }}</a></td>
+              <td>{{ contract.tenant|default:"-" }}</td>
+              <td>{{ contract.get_status_display }}</td>
+              <td>{{ contract.external_reference|default:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4">No contracts available.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <div>
+      <section class="bcc-panel">
+        <div class="bcc-panel-head">
+          <h5>Hardware Checkout / Transfer</h5>
+        </div>
+        <form class="bcc-form" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="hardware_checkout">
+          <div>
+            <label class="form-label" for="device_id">Hardware</label>
+            <select class="form-select" id="device_id" name="device_id" required>
+              <option value="">Select hardware...</option>
+              {% for device in devices %}
+              <option value="{{ device.id }}">{{ device.name|default:device.id }} ({{ device.site }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="form-label" for="tenant_id">Customer</label>
+            <select class="form-select" id="tenant_id" name="tenant_id">
+              <option value="">Unassigned</option>
+              {% for customer in customers %}
+              <option value="{{ customer.id }}">{{ customer.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="form-label" for="site_id">Site (Optional move)</label>
+            <select class="form-select" id="site_id" name="site_id">
+              <option value="">Keep current site</option>
+              {% for site in sites %}
+              <option value="{{ site.id }}">{{ site.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="form-label" for="note">Change Note</label>
+            <input class="form-control" id="note" name="note" placeholder="Reason for checkout or transfer">
+          </div>
+          <button class="btn btn-primary" type="submit">Apply Checkout Update</button>
+        </form>
+      </section>
+
+      <section class="bcc-panel">
+        <div class="bcc-panel-head">
+          <h5>Recent Invoices</h5>
+          <a class="btn btn-sm btn-primary" href="{% url 'plugins:netbox_contract:invoice_list' %}">Open Invoices</a>
+        </div>
+        <table class="bcc-table">
+          <thead>
+            <tr>
+              <th>Invoice</th>
+              <th>Status</th>
+              <th>Amount</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for invoice in invoices %}
+            <tr>
+              <td><a href="{{ invoice.get_absolute_url }}">{{ invoice.number }}</a></td>
+              <td>{{ invoice.get_status_display }}</td>
+              <td>{{ invoice.amount }} {{ invoice.currency|upper }}</td>
+              <td>{{ invoice.date|default:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4">No invoices available.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock content %}

@@ -1,0 +1,405 @@
+:root {
+  --bg: #f4f1eb;
+  --panel: #f6f3ee;
+  --line: #b7cad8;
+  --line-strong: #93b4ca;
+  --text: #596069;
+  --muted: #8b9198;
+  --link: #4e88ae;
+  --active: #3f7fa9;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.4 "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+.cx-form-page {
+  --bs-body-bg: #f4f1eb;
+  --bs-body-color: #596069;
+  --bs-border-color: #b7cad8;
+  --bs-secondary-bg: #f6f3ee;
+  --bs-tertiary-bg: #efebe5;
+  --bs-light-bg-subtle: #f6f3ee;
+  --bs-link-color: #4e88ae;
+  --bs-link-hover-color: #3f7fa9;
+  background: var(--bg) !important;
+  color: var(--text) !important;
+}
+.cx-form-page .form-control,
+.cx-form-page .form-select,
+.cx-form-page .ts-control,
+.cx-form-page .ts-dropdown,
+.cx-form-page .choices__inner,
+.cx-form-page .choices__list--dropdown {
+  background-color: #f6f3ee !important;
+  color: var(--text) !important;
+  border-color: var(--line-strong) !important;
+}
+.cx-form-page .ts-dropdown .option,
+.cx-form-page .choices__item {
+  color: var(--text) !important;
+}
+.cx-form-page .text-muted,
+.cx-form-page .form-text {
+  color: var(--muted) !important;
+}
+.cx-form-page .card,
+.cx-form-page .tab-content,
+.cx-form-page .markdown-widget .tab-content {
+  background: var(--panel) !important;
+  border-color: #d7d9dc !important;
+}
+.cx-app {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 36px 20px 40px;
+}
+.cx-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.brand {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: 0.08em;
+  color: #727983;
+}
+.link-engineer,
+.back-link {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 13px;
+}
+.link-engineer:hover,
+.back-link:hover { color: var(--link); }
+.view-nav {
+  display: inline-flex;
+  justify-content: center;
+  margin: 14px auto 20px;
+  width: auto;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 1px solid var(--line-strong);
+}
+.view-nav a {
+  text-decoration: none;
+  color: var(--muted);
+  font-size: 14px;
+  padding: 8px 26px;
+  border-right: 1px solid var(--line-strong);
+}
+.view-nav a:last-child { border-right: 0; }
+.view-nav a.active {
+  background: #ece9e2;
+  color: #5b6168;
+}
+.cx-messages { margin-bottom: 14px; }
+.cx-message {
+  border: 1px solid var(--line);
+  background: #efebe5;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+.cx-stats-line {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+.cx-searchbar {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.cx-filterrow {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.cx-searchbar input,
+.cx-filterrow select,
+.cx-filterrow button,
+.cx-searchbar button,
+.cx-form input:not([type="checkbox"]):not([type="radio"]),
+.cx-form select,
+.cx-form button,
+.inline-form button {
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  padding: 10px 12px;
+}
+.cx-searchbar input { min-width: 510px; text-align: center; }
+.cx-searchbar button,
+.cx-filterrow button,
+.cx-form button,
+.inline-form button { cursor: pointer; }
+.cx-searchbar button:hover,
+.cx-filterrow button:hover,
+.cx-form button:hover,
+.inline-form button:hover {
+  border-color: var(--active);
+  color: var(--active);
+}
+.cx-form-page input[type="checkbox"],
+.cx-form-page input[type="radio"] {
+  padding: 0 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  border-radius: 0 !important;
+}
+.cx-form-page .form-switch .form-check-input {
+  width: 2.2em !important;
+  height: 1.2em !important;
+}
+.cx-grid.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.cx-panel,
+.cx-table-panel {
+  border: 1px solid #d7d9dc;
+  background: var(--panel);
+  padding: 14px;
+}
+.cx-panel h3,
+.cx-table-panel h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: #6f7780;
+  text-transform: lowercase;
+}
+.cx-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+  justify-content: center;
+}
+.cx-actions a {
+  text-decoration: none;
+  color: var(--text);
+  border: 1px solid var(--line-strong);
+  padding: 7px 10px;
+  font-size: 13px;
+  background: transparent;
+}
+.cx-actions a:hover { color: var(--active); border-color: var(--active); }
+.cx-actions button {
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--text);
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.cx-actions button:hover {
+  color: var(--active);
+  border-color: var(--active);
+}
+.cx-actions .danger {
+  border-color: #c58a8a;
+  color: #8d4040;
+}
+.cx-actions .danger:hover {
+  border-color: #a43f3f;
+  color: #a43f3f;
+}
+.cx-form {
+  display: grid;
+  gap: 8px;
+}
+.cx-form label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.cx-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.cx-table th,
+.cx-table td {
+  border: 1px solid #d9dde1;
+  padding: 7px 8px;
+  text-align: left;
+  vertical-align: top;
+  font-size: 12px;
+}
+.cx-table th {
+  font-weight: 600;
+  color: #6f7780;
+}
+.cx-table a {
+  color: var(--link);
+  text-decoration: none;
+}
+.cx-table a:hover { text-decoration: underline; }
+.subcell {
+  color: var(--muted);
+  font-size: 12px;
+}
+.sep { margin: 0 4px; color: var(--muted); }
+.inline-form {
+  display: inline-block;
+  margin-right: 6px;
+}
+dl {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  margin: 0;
+}
+dt, dd {
+  margin: 0;
+  padding: 6px 0;
+  border-top: 1px solid #e0e3e6;
+  font-size: 12px;
+}
+dt { color: var(--muted); }
+.cx-django-form p {
+  margin: 0 0 10px;
+}
+.cx-django-form label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.cx-django-form input:not([type="checkbox"]):not([type="radio"]),
+.cx-django-form select,
+.cx-django-form textarea {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--text);
+  padding: 9px 10px;
+  font: inherit;
+  font-size: 13px;
+}
+.cx-django-form input[type="checkbox"],
+.cx-django-form input[type="radio"] {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  height: auto;
+  padding: 0;
+  vertical-align: middle;
+}
+.cx-django-form input[type="hidden"] {
+  display: none !important;
+}
+.cx-django-form .form-check-input,
+#id_autopay_enabled {
+  width: 1.1em !important;
+  min-width: 1.1em !important;
+  max-width: 1.1em !important;
+  height: 1.1em !important;
+  padding: 0 !important;
+  margin: 0 0.35rem 0 0 !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+.cx-django-form .form-switch {
+  padding-left: 0 !important;
+}
+.cx-django-form .form-switch .form-check-input,
+.cx-django-form .form-check.form-switch .form-check-input,
+.cx-django-form #id_autopay_enabled.form-check-input {
+  float: none !important;
+  margin-left: 0 !important;
+  width: 1.1em !important;
+  min-width: 1.1em !important;
+  max-width: 1.1em !important;
+  height: 1.1em !important;
+  background-image: none !important;
+  border-radius: 2px !important;
+}
+.cx-django-form textarea {
+  min-height: 120px;
+}
+.cx-django-form .nav-tabs {
+  display: flex;
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  width: fit-content;
+}
+.cx-django-form .nav-tabs .nav-item {
+  margin: 0;
+}
+.cx-django-form .nav-tabs .nav-link {
+  display: block;
+  text-decoration: none;
+  color: var(--muted);
+  border-right: 1px solid var(--line-strong);
+  padding: 8px 16px;
+  font-size: 12px;
+}
+.cx-django-form .nav-tabs .nav-item:last-child .nav-link {
+  border-right: 0;
+}
+.cx-django-form .nav-tabs .nav-link.active {
+  color: var(--text);
+  background: #ece9e2;
+}
+.cx-django-form .tab-content {
+  border: 1px solid #d7d9dc;
+  background: var(--panel);
+  padding: 10px;
+  margin-bottom: 10px;
+}
+.cx-django-form .markdown-widget .nav.nav-pills {
+  display: inline-flex;
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+}
+.cx-django-form .markdown-widget .nav.nav-pills .nav-item {
+  margin: 0;
+}
+.cx-django-form .markdown-widget .nav.nav-pills .nav-link {
+  border: 0;
+  border-right: 1px solid var(--line-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 8px 16px;
+  font: inherit;
+  font-size: 12px;
+}
+.cx-django-form .markdown-widget .nav.nav-pills .nav-item:last-child .nav-link {
+  border-right: 0;
+}
+.cx-django-form .markdown-widget .nav.nav-pills .nav-link.active {
+  background: #ece9e2;
+  color: var(--text);
+}
+.cx-django-form .markdown-widget .tab-content {
+  border: 1px solid #d7d9dc;
+  background: var(--panel);
+  border-radius: 0;
+}
+@media (max-width: 1000px) {
+  .cx-grid.two-col { grid-template-columns: 1fr; }
+  .cx-searchbar,
+  .cx-filterrow { flex-direction: column; align-items: stretch; }
+  .cx-searchbar input { min-width: 0; width: 100%; text-align: left; }
+}

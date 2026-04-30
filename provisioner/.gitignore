@@ -1,0 +1,29 @@
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Node / React
+node_modules/
+frontend/build/
+
+# Env / Secrets
+.env
+configs/host_interfaces.json
+
+# Generated configs
+configs/*.rsc
+
+# RouterOS packages (do not commit binaries)
+routeros/*.npk
+routeros/routeros.npk
+
+# Logs / artifacts
+*.log
+dist/
+coverage/

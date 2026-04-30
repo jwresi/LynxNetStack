@@ -1,0 +1,12 @@
+[
+  {
+    "device_mac": "AA:11:22:33:44:55",
+    "notes": "site-1A",
+    "device_sn": "VILO-1A"
+  },
+  {
+    "device_mac": "30:22:33:44:55:70",
+    "notes": "site-1D",
+    "device_sn": "VILO-1D"
+  }
+]

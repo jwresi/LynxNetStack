@@ -1,0 +1,17 @@
+[Unit]
+Description=Jake2 Network Intelligence Engine
+After=network.target
+
+[Service]
+Type=simple
+User=resibridge
+WorkingDirectory=/opt/lynxnetstack/jake2
+EnvironmentFile=/opt/lynxnetstack/jake2/config/.env
+ExecStart=/opt/lynxnetstack/jake2/.venv/bin/python -m api.server
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

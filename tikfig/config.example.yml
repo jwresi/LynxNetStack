@@ -1,0 +1,36 @@
+netbox:
+  url: "https://netbox.example.com"
+  token: "YOUR_NETBOX_TOKEN"
+  verify_tls: true
+
+mikrotik:
+  default_ip: "192.168.88.1"
+  api_port: 8728
+  api_user: "admin"
+  api_password: ""
+
+templates:
+  switch: "templates/switch.jinja2"
+  router: "templates/router.jinja2"
+
+# Optional: fallback port maps if NetBox config context does not define them.
+model_interfaces:
+  CRS326-24G-2S+:
+    access_ports:
+      vlan10: []
+      vlan20: ["ether1", "ether2", "ether3", "ether4", "ether5", "ether6", "ether7", "ether8", "ether9", "ether10", "ether11", "ether12", "ether13", "ether14", "ether15", "ether16", "ether17", "ether18", "ether19", "ether20", "ether21", "ether22", "ether23"]
+      vlan30: ["ether24"]
+    trunk_ports: ["sfp-sfpplus1", "sfp-sfpplus2"]
+    isolation_ports:
+      start: 1
+      end: 24
+  CRS354-48G-4S+2Q+:
+    access_ports:
+      vlan10: ["ether47", "ether48"]
+      vlan20: ["ether1", "ether2", "ether3", "ether4", "ether5", "ether6", "ether7", "ether8", "ether9", "ether10", "ether11", "ether12", "ether13", "ether14", "ether15", "ether16", "ether17", "ether18", "ether19", "ether20", "ether21", "ether22", "ether23", "ether24", "ether25", "ether26", "ether27", "ether28", "ether29", "ether30", "ether31", "ether32", "ether33", "ether34", "ether35", "ether36", "ether37", "ether38", "ether39", "ether40", "ether41", "ether42", "ether43", "ether44", "ether45", "ether46"]
+      vlan30: []
+    trunk_ports: ["sfp-sfpplus1", "sfp-sfpplus2", "sfp-sfpplus3", "sfp-sfpplus4", "qsfpplus1", "qsfpplus2"]
+    qsfp_ports: ["qsfpplus1", "qsfpplus2"]
+    isolation_ports:
+      start: 1
+      end: 48

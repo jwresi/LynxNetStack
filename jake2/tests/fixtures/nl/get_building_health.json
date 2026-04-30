@@ -1,0 +1,14 @@
+[
+  {
+    "raw": "how is 000007.001",
+    "expected_intent": "get_building_health",
+    "expected_site": "000007",
+    "notes": "Direct building health phrasing for a building id."
+  },
+  {
+    "raw": "what is going on with 000007.001",
+    "expected_intent": "get_building_health",
+    "expected_site": "000007",
+    "notes": "Variant building-health phrasing from the old scripts copy."
+  }
+]

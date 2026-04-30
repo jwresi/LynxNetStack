@@ -1,0 +1,14 @@
+[
+  {
+    "raw": "show cnwave neighbors for 000008",
+    "expected_intent": "get_live_cnwave_radio_neighbors",
+    "expected_site": "000008",
+    "notes": "Site-scoped cnWave neighbor phrasing should route to the live cnWave neighbor action."
+  },
+  {
+    "raw": "live radio neighbors at chenoweth",
+    "expected_intent": "get_live_cnwave_radio_neighbors",
+    "expected_site": "000008",
+    "notes": "Named-site radio-neighbor phrasing should resolve to the same live neighbor action."
+  }
+]

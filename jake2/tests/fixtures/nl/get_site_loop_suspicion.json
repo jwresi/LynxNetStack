@@ -1,0 +1,14 @@
+[
+  {
+    "raw": "do we have a loop at nycha",
+    "expected_intent": "get_site_loop_suspicion",
+    "expected_site": "000007",
+    "notes": "Direct operator phrasing about a loop at NYCHA should map to the loop-suspicion action."
+  },
+  {
+    "raw": "loop suspicion at chenoweth",
+    "expected_intent": "get_site_loop_suspicion",
+    "expected_site": "000008",
+    "notes": "Explicit loop-suspicion phrasing with a named site should resolve to that site's loop-suspicion read."
+  }
+]

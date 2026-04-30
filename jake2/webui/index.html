@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jake</title>
+    <link rel="stylesheet" href="/ui/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-head">
+          <div class="brand">Jake</div>
+          <button id="newThreadBtn" class="icon-btn" title="New thread">+</button>
+        </div>
+        <div class="search-wrap">
+          <input id="threadSearch" class="search" placeholder="Search threads" />
+        </div>
+        <div class="menu-section-label">Threads</div>
+        <div id="threadList" class="thread-list"></div>
+      </aside>
+
+      <main class="chat-pane">
+        <header class="chat-header">
+          <div>
+            <div id="threadTitle" class="thread-title">New Thread</div>
+            <div class="thread-subtitle">Deterministic Jake operator console • <span id="buildStamp">build …</span></div>
+            <div id="serverWarning" class="server-warning" hidden>Server changed since page load. Refresh this page before sending.</div>
+          </div>
+          <div class="header-actions">
+            <button id="pinThreadBtn" class="ghost-btn">Pin</button>
+            <button id="renameThreadBtn" class="ghost-btn">Rename</button>
+            <button id="deleteThreadBtn" class="ghost-btn danger">Delete</button>
+          </div>
+        </header>
+
+        <section id="messageList" class="message-list"></section>
+
+        <section class="composer-wrap">
+          <div class="quick-prompts">
+            <button class="chip" data-prompt="how many customers are currently online for 000007?">Online 000007</button>
+            <button class="chip" data-prompt="we have a reported outage at 104 tapscott unit 4b. tell me everything you can about it.">104 Tapscott 4B</button>
+            <button class="chip" data-prompt="show rogue dhcp suspects on 000007">Rogue DHCP</button>
+            <button class="chip" data-prompt="are you witnessing any odd behavior on the 192.168.44.0/24 network?">Odd Behavior</button>
+          </div>
+          <textarea id="composer" class="composer" rows="4" placeholder="Ask Jake a network operations question..."></textarea>
+          <div class="composer-actions">
+            <div id="statusText" class="status-text"></div>
+            <button id="sendBtn" class="send-btn">Send</button>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <template id="messageTemplate">
+      <article class="message">
+        <div class="message-role"></div>
+        <div class="message-body"></div>
+      </article>
+    </template>
+
+    <script src="/ui/app.js"></script>
+  </body>
+</html>

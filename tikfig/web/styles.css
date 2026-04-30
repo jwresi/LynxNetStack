@@ -1,0 +1,277 @@
+:root {
+  color-scheme: light;
+  --ink: #0f1c2e;
+  --muted: #5a6b86;
+  --accent: #0f6d5c;
+  --accent-bright: #21b08f;
+  --panel: #f4f1ec;
+  --panel-strong: #ffffff;
+  --edge: rgba(15, 28, 46, 0.12);
+  --shadow: 0 18px 40px rgba(12, 22, 35, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Avenir Next", "Avenir", "Futura", "Trebuchet MS", sans-serif;
+  color: var(--ink);
+  background: linear-gradient(135deg, #f7efe4 0%, #ecf1f6 55%, #e0efe9 100%);
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 20% 20%, rgba(33, 176, 143, 0.2), transparent 55%),
+    radial-gradient(circle at 80% 10%, rgba(15, 109, 92, 0.25), transparent 60%),
+    radial-gradient(circle at 60% 80%, rgba(243, 190, 110, 0.2), transparent 55%);
+  pointer-events: none;
+}
+
+.shell {
+  position: relative;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 24px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(32px, 4vw, 48px);
+  letter-spacing: -0.02em;
+}
+
+.subhead {
+  margin: 12px 0 0;
+  max-width: 520px;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.status-card {
+  background: var(--panel-strong);
+  border: 1px solid var(--edge);
+  border-radius: 20px;
+  padding: 20px 24px;
+  min-width: 220px;
+  box-shadow: var(--shadow);
+}
+
+.status-label {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+
+.status {
+  margin: 8px 0 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.status.online {
+  color: var(--accent);
+}
+
+.status.offline {
+  color: #c04f35;
+}
+
+.status-meta {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.wizard {
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 24px;
+  padding: 24px;
+  border: 1px solid var(--edge);
+  box-shadow: var(--shadow);
+}
+
+.steps {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.step {
+  border: 1px solid var(--edge);
+  background: var(--panel);
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.step.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+
+.panel {
+  display: grid;
+  gap: 16px;
+  animation: fadeUp 0.4s ease;
+}
+
+.panel.hidden {
+  display: none;
+}
+
+.callout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  background: var(--panel-strong);
+  border-radius: 16px;
+  border: 1px solid var(--edge);
+}
+
+.callout-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.callout-body {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+input,
+select {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--edge);
+  font-size: 15px;
+  color: var(--ink);
+  background: #fff;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+button {
+  border: none;
+  padding: 10px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+button.primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+button.secondary {
+  background: #fff;
+  border: 1px solid var(--edge);
+  color: var(--ink);
+}
+
+.note {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.device-summary {
+  background: #fff;
+  border: 1px solid var(--edge);
+  border-radius: 16px;
+  padding: 16px;
+  display: grid;
+  gap: 6px;
+}
+
+.output {
+  background: #0f1c2e;
+  color: #f7f5f0;
+  border-radius: 16px;
+  padding: 16px;
+  max-height: 340px;
+  overflow: auto;
+}
+
+pre {
+  margin: 0;
+  font-family: "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 720px) {
+  .status-card {
+    width: 100%;
+  }
+
+  .callout {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

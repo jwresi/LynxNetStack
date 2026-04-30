@@ -1,0 +1,8 @@
+[
+  {
+    "raw": "Good afternoon Jake. Hows cambridge looking today?",
+    "expected_intent": "get_site_summary",
+    "expected_site": "000004",
+    "notes": "The old human-ops wrapper delegated into the everyday-language regression corpus; this fixture preserves one representative summary case."
+  }
+]

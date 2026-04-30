@@ -1,0 +1,101 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>onboarding :: resi.billing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'netbox_billing/cx.css' %}">
+</head>
+<body>
+  <main class="cx-app">
+    <header class="cx-topbar">
+      <h1 class="brand">customer onboarding flow</h1>
+      <a href="{% url 'plugins:netbox_billing:cx_dashboard' %}" class="link-engineer">cx home</a>
+    </header>
+
+    <nav class="view-nav">
+      <a href="{% url 'plugins:netbox_billing:cx_dashboard' %}">customers</a>
+      <a href="{% url 'plugins:netbox_billing:cx_onboarding' %}" class="active">onboarding</a>
+      <a href="{% url 'plugins:netbox_billing:cx_catalog' %}">catalog</a>
+    </nav>
+
+    <section class="cx-grid two-col">
+      <article class="cx-panel">
+        <h3>step 1: create customer</h3>
+        <p>Create a tenant record, then create a billing account linked to that tenant.</p>
+        <div class="cx-actions">
+          <a href="{% url 'plugins:netbox_billing:cx_add' model='tenant' %}?next={{ request.get_full_path|urlencode }}">create tenant</a>
+          <a href="{% url 'plugins:netbox_billing:cx_add' model='billingaccount' %}?next={{ request.get_full_path|urlencode }}">create billing account</a>
+        </div>
+      </article>
+      <article class="cx-panel">
+        <h3>step 2: add billing profile</h3>
+        <p>Enter contact, address, and billing preferences for the account.</p>
+        <div class="cx-actions">
+          <a href="{% url 'plugins:netbox_billing:cx_add' model='customerprofile' %}?next={{ request.get_full_path|urlencode }}">create profile</a>
+          <a href="{% url 'plugins:netbox_billing:cx_add' model='invoice' %}?next={{ request.get_full_path|urlencode }}">create invoice</a>
+          <a href="{% url 'plugins:netbox_billing:cx_add' model='scheduledpayment' %}?next={{ request.get_full_path|urlencode }}">schedule payment</a>
+        </div>
+      </article>
+    </section>
+
+    <section class="cx-grid two-col">
+      <article class="cx-panel">
+        <h3>step 3: install & assign device</h3>
+        <p>At install time, assign CPE/unit/service package and activate the subscription.</p>
+        <div class="cx-actions">
+          <a href="{% url 'plugins:netbox_billing:cx_add' model='property' %}?next={{ request.get_full_path|urlencode }}">create property</a>
+          <a href="{% url 'plugins:netbox_billing:cx_add' model='unit' %}?next={{ request.get_full_path|urlencode }}">create unit</a>
+          <a href="{% url 'plugins:netbox_billing:cx_add' model='subscription' %}?next={{ request.get_full_path|urlencode }}">assign service/cpe</a>
+        </div>
+      </article>
+      <article class="cx-panel">
+        <h3>step 4: verify activation</h3>
+        <p>Review recent accounts and recently assigned services to confirm completion.</p>
+      </article>
+    </section>
+
+    <section class="cx-table-panel">
+      <h3>recent customers</h3>
+      <table class="cx-table">
+        <thead><tr><th>customer</th><th>status</th><th>balance</th><th>actions</th></tr></thead>
+        <tbody>
+          {% for account in latest_accounts %}
+          <tr>
+            <td>{{ account.tenant.name }}</td>
+            <td>{{ account.get_status_display }}</td>
+            <td>{{ account.account_balance }}</td>
+            <td><a href="{% url 'plugins:netbox_billing:cx_customer' pk=account.pk %}">open</a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4">no customer records yet</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="cx-table-panel">
+      <h3>recent service assignments</h3>
+      <table class="cx-table">
+        <thead><tr><th>customer</th><th>service</th><th>status</th><th>cpe</th></tr></thead>
+        <tbody>
+          {% for service in latest_subscriptions %}
+          <tr>
+            <td>{{ service.account.tenant.name }}</td>
+            <td>{{ service.tariff_plan|default:service.tariff_bundle|default:'-' }}</td>
+            <td>{{ service.get_status_display }}</td>
+            <td>{{ service.cpe_device|default:'-' }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4">no service assignments yet</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

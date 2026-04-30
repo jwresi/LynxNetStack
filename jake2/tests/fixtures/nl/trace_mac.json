@@ -1,0 +1,14 @@
+[
+  {
+    "raw": "trace this MAC for me DC:62:79:9D:C1:AD",
+    "expected_intent": "trace_mac",
+    "expected_site": null,
+    "notes": "Direct operator phrasing for MAC trace."
+  },
+  {
+    "raw": "where is this device showing up DC:62:79:9D:C1:AD",
+    "expected_intent": "trace_mac",
+    "expected_site": null,
+    "notes": "Variant phrasing for the same MAC trace action."
+  }
+]

@@ -1,0 +1,337 @@
+############## Router Device Configuration ##############
+# This template generates RouterOS configuration for Router role devices
+# Uses variables from:
+# 1. Device Properties (NetBox Device Object)
+# 2. Config Context (device.get_config_context())
+
+{% with ctx = device.get_config_context() %}
+
+{# ========== ROUTER-SPECIFIC HARDCODED VALUES ========== #}
+{% set BR_WAN = "BR-WAN" %}
+{% set BR_CGNAT = "BR-CGNAT" %}
+{% set ENABLE_SSH_BRUTE_FORCE_PROTECTION = true %}
+{% set ENABLE_RESICORE_WHITELIST = true %}
+
+{# Define model_interfaces from router-specific config #}
+{% set model_interfaces = ctx.mikrotik.router.model_interfaces[device.device_type.model] %}
+
+### System Identity & Base Config
+/system identity
+set name={{ device.name }}
+
+### System Timezone
+/system clock
+set time-zone-name={{ ctx.mikrotik.system.timezone }}
+
+### DNS Configuration
+/ip dns
+set servers={{ ctx.mikrotik.system.dns.servers | join(',') }}
+set allow-remote-requests=yes
+
+### Syslog Configuration
+/system logging action
+set 3 bsd-syslog=yes remote={{ ctx.mikrotik.system.syslog.server }} syslog-facility={{ ctx.mikrotik.system.syslog.facility }}
+
+/system logging
+{% if ctx.mikrotik.system.syslog.topics.info %}
+set 0 action=remote prefix=:info topics=info
+{% endif %}
+{% if ctx.mikrotik.system.syslog.topics.error %}
+set 1 action=remote prefix=:Error
+{% endif %}
+{% if ctx.mikrotik.system.syslog.topics.warning %}
+set 2 action=remote prefix=:Warning
+{% endif %}
+{% if ctx.mikrotik.system.syslog.topics.critical %}
+set 3 action=remote prefix=:Critical topics=interface
+{% endif %}
+{% if ctx.mikrotik.system.syslog.topics.firewall %}
+add action=remote prefix=:Firewall topics=firewall
+{% endif %}
+{% if ctx.mikrotik.system.syslog.topics.pppoe %}
+add action=remote prefix=:pppoe topics=pppoe,info
+{% endif %}
+
+### Service Configuration
+/ip service
+{% for service in ctx.mikrotik.security.services.disabled %}
+set {{ service }} disabled=yes
+{% endfor %}
+set ssh address="{{ ctx.mikrotik.security.networks.management | join(',') }}"
+set api address="{{ ctx.mikrotik.security.networks.management | join(',') }}"
+set winbox address="{{ ctx.mikrotik.security.networks.management | join(',') }}"
+
+### User Groups Configuration
+/user group
+{% for group_name, policy in ctx.mikrotik.security.user_groups.items() %}
+add name={{ group_name }} policy="{{ policy }}"
+{% endfor %}
+
+### User Configuration
+/user
+{% for username, user in ctx.mikrotik.security.users.items() %}
+add name={{ username }} group={{ user.group }} password={{ user.password }}
+{% endfor %}
+
+### AAA and RADIUS Configuration
+/user aaa
+set use-radius=yes
+
+/radius
+add address=172.27.209.248 secret=jSniRkQfIwDRJUWG7Mwp service=login
+
+### SNMP Configuration
+/snmp community
+add addresses=::/0 name={{ ctx.mikrotik.monitoring.snmp.community }}
+
+/snmp
+set enabled=yes trap-community={{ ctx.mikrotik.monitoring.snmp.trap_community }} trap-version={{ ctx.mikrotik.monitoring.snmp.trap_version }}
+
+### Netwatch Configuration
+/tool netwatch
+{% for target in ctx.mikrotik.monitoring.netwatch %}
+add comment="{{ target.name }}" disabled=no host={{ target.host }} type={{ target.type }}
+{% endfor %}
+
+### Firewall Address Lists
+/ip firewall address-list
+{% for name, ip in ctx.mikrotik.security.networks.monitoring.items() %}
+add address={{ ip | replace('/32','') }} comment={{ name }} list=ResiCore
+{% endfor %}
+
+### Base Firewall Rules
+/ip firewall filter
+add chain=input src-address=10.250.32.1 action=accept comment="Whitelist 10.250.32.1 - Never drop" place-before=0
+add chain=forward src-address=10.250.32.1 action=accept comment="Whitelist 10.250.32.1 - Never drop" place-before=0
+add chain=output dst-address=10.250.32.1 action=accept comment="Whitelist 10.250.32.1 - Never drop" place-before=0
+
+{% if ENABLE_RESICORE_WHITELIST %}
+add action=accept chain=forward comment="Allow ResiBridge Core IPs" src-address-list=ResiCore
+add action=accept chain=input comment="Allow ResiBridge Core IPs" src-address-list=ResiCore
+{% endif %}
+
+{% if ENABLE_SSH_BRUTE_FORCE_PROTECTION %}
+add action=drop chain=input comment="Drop SSH brute forcers" dst-port=22 protocol=tcp src-address-list=ssh_blacklist
+add action=add-src-to-address-list address-list=ssh_blacklist address-list-timeout=1w3d chain=input comment="Move persistent offenders to blacklist" connection-state=new dst-port=22 protocol=tcp src-address-list=ssh_stage3
+add action=add-src-to-address-list address-list=ssh_stage3 address-list-timeout=1m chain=input comment="Escalate to stage 3" connection-state=new dst-port=22 protocol=tcp src-address-list=ssh_stage2
+add action=add-src-to-address-list address-list=ssh_stage2 address-list-timeout=1m chain=input comment="Escalate to stage 2" connection-state=new dst-port=22 protocol=tcp src-address-list=ssh_stage1
+add action=add-src-to-address-list address-list=ssh_stage1 address-list-timeout=1m chain=input comment="Initial detection - Add to stage 1" connection-state=new dst-port=22 protocol=tcp
+{% endif %}
+
+{# WAN CONFIGURATION SECTION #}
+{# Extract IP information for WAN from BR-WAN interface #}
+{% if device.wan_ip %}
+    {% set wan_ip = device.wan_ip.address %}
+    {% set wan_network = device.wan_ip.network %}
+
+# Create WAN Bridge for public interface redundancy
+/interface bridge
+add name={{ BR_WAN }}
+
+# Add physical WAN ports to bridge for redundancy
+/interface bridge port
+{% for port in model_interfaces.wan_ports %}
+add bridge={{ BR_WAN }} interface={{ port }}
+{% endfor %}
+
+{# Gateway IP handling - calculate from network address #}
+{% set net_octets = device.wan_ip.network_octets %}
+{% set gateway_ip = net_octets[0] ~ '.' ~ net_octets[1] ~ '.' ~ net_octets[2] ~ '.' ~ (net_octets[3] + 1) %}
+
+# Configure WAN IP address
+/ip address
+add address={{ wan_ip }} interface={{ BR_WAN }} network={{ device.wan_ip.network_octets[0] }}.{{ device.wan_ip.network_octets[1] }}.{{ device.wan_ip.network_octets[2] }}.{{ device.wan_ip.network_octets[3] }} comment=WAN
+
+# Add default route via WAN gateway
+/ip route
+add disabled=no distance=1 dst-address=0.0.0.0/0 gateway={{ gateway_ip }} \
+    pref-src="" routing-table=main scope=30 suppress-hw-offload=no \
+    target-scope=10
+{% else %}
+# Create WAN Bridge for public interface redundancy
+/interface bridge
+add name={{ BR_WAN }}
+
+# Add physical WAN ports to bridge for redundancy
+/interface bridge port
+{% for port in model_interfaces.wan_ports %}
+add bridge={{ BR_WAN }} interface={{ port }}
+{% endfor %}
+
+# WAN IP: Check NetBox for IP address on BR-WAN interface
+{% endif %}
+
+{# CGNAT CONFIGURATION SECTION #}
+# CGNAT Bridge Configuration
+/interface bridge
+add name={{ BR_CGNAT }}
+
+# Add Bridge Ports
+/interface bridge port
+{% if model_interfaces.cgnat_range %}
+    {% set start_port = model_interfaces.cgnat_range.start %}
+    {% set end_port = model_interfaces.cgnat_range.end %}
+    {# Add each port in the range #}
+    {% if 'ether' in start_port %}
+        {% set start_num = start_port.replace('ether', '') | int %}
+        {% set end_num = end_port.replace('ether', '') | int %}
+        {% for port_num in range(start_num, end_num + 1) %}
+add bridge={{ BR_CGNAT }} interface=ether{{ port_num }}
+        {% endfor %}
+    {% elif 'sfp-sfpplus' in start_port %}
+        {% set start_num = start_port.replace('sfp-sfpplus', '') | int %}
+        {% set end_num = end_port.replace('sfp-sfpplus', '') | int %}
+        {% for port_num in range(start_num, end_num + 1) %}
+add bridge={{ BR_CGNAT }} interface=sfp-sfpplus{{ port_num }}
+        {% endfor %}
+    {% endif %}
+{% endif %}
+
+{# CGNAT Configuration #}
+{% set cgnat_found = false %}
+
+{# Check if CGNAT prefix is available from direct variables #}
+{% if cgnat_prefix_str and cgnat_gateway %}
+    {% set cgnat_found = true %}
+    {% set cgnat_prefix_ip = cgnat_prefix_str.split('/')[0] %}
+    {% set cgnat_octets = cgnat_prefix_ip.split('.') %}
+{% elif device.cgnat.prefix %}
+    {# Fallback to device.cgnat if direct variables not available #}
+    {% set cgnat_prefix_str = device.cgnat.prefix %}
+    {% set cgnat_prefix_parts = cgnat_prefix_str.split('/') %}
+    {% set cgnat_prefix_ip = cgnat_prefix_parts[0] %}
+    {% set cgnat_prefix_length = cgnat_prefix_parts[1]|int %}
+    {% set cgnat_found = true %}
+
+    {# Get gateway IP from NetBox if available #}
+    {% if device.cgnat.gateway_ip %}
+        {% set cgnat_gateway_parts = device.cgnat.gateway_ip.split('/') %}
+        {% set cgnat_gateway = cgnat_gateway_parts[0] %}
+    {% else %}
+        {# Fallback to calculating gateway IP if not found in NetBox #}
+        {% set cgnat_octets = cgnat_prefix_ip.split('.') %}
+        {% set cgnat_gateway = cgnat_octets[0] ~ '.' ~ cgnat_octets[1] ~ '.' ~ cgnat_octets[2] ~ '.1' %}
+    {% endif %}
+{% endif %}
+
+{# If CGNAT prefix is found, configure it #}
+{% if cgnat_found %}
+    {% if not cgnat_octets %}
+        {% set cgnat_octets = cgnat_prefix_ip.split('.') %}
+    {% endif %}
+
+# CGNAT IP Configuration - Using Site Prefix {{ cgnat_prefix_str }}
+/ip address
+add address={{ cgnat_gateway }}/{{ cgnat_prefix_length }} interface={{ BR_CGNAT }}
+
+# CGNAT DHCP Pool
+{# Calculate DHCP pool range - leave first 30 and last 30 IPs #}
+{% set pool_start = 31 %}
+{% set pool_end = 254 - 30 %}
+
+{# For larger prefixes, calculate appropriate range #}
+{% if cgnat_prefix_length < 24 %}
+    {% set subnet_span = 1 %}
+    {% if cgnat_prefix_length == 23 %}
+        {% set subnet_span = 2 %}
+    {% elif cgnat_prefix_length == 22 %}
+        {% set subnet_span = 4 %}
+    {% elif cgnat_prefix_length == 21 %}
+        {% set subnet_span = 8 %}
+    {% elif cgnat_prefix_length == 20 %}
+        {% set subnet_span = 16 %}
+    {% elif cgnat_prefix_length == 19 %}
+        {% set subnet_span = 32 %}
+    {% elif cgnat_prefix_length == 18 %}
+        {% set subnet_span = 64 %}
+    {% elif cgnat_prefix_length == 17 %}
+        {% set subnet_span = 128 %}
+    {% elif cgnat_prefix_length == 16 %}
+        {% set subnet_span = 256 %}
+    {% endif %}
+
+    {% if subnet_span == 1 %}
+        /ip pool
+        add name=cgnat-pool ranges={{ cgnat_octets[0] }}.{{ cgnat_octets[1] }}.{{ cgnat_octets[2] }}.{{ pool_start }}-{{ cgnat_octets[0] }}.{{ cgnat_octets[1] }}.{{ cgnat_octets[2] }}.{{ pool_end }}
+    {% else %}
+        {% set third_octet = cgnat_octets[2]|int %}
+        {% set last_third_octet = third_octet + subnet_span - 1 %}
+
+        /ip pool
+        add name=cgnat-pool ranges={{ cgnat_octets[0] }}.{{ cgnat_octets[1] }}.{{ third_octet }}.{{ pool_start }}-{{ cgnat_octets[0] }}.{{ cgnat_octets[1] }}.{{ last_third_octet }}.{{ pool_end }}
+    {% endif %}
+{% else %}
+    /ip pool
+    add name=cgnat-pool ranges={{ cgnat_octets[0] }}.{{ cgnat_octets[1] }}.{{ cgnat_octets[2] }}.{{ pool_start }}-{{ cgnat_octets[0] }}.{{ cgnat_octets[1] }}.{{ cgnat_octets[2] }}.{{ pool_end }}
+{% endif %}
+
+# CGNAT DHCP Server
+/ip dhcp-server
+add address-pool=cgnat-pool interface={{ BR_CGNAT }} name=CGNAT
+
+# DHCP Network
+/ip dhcp-server network
+add address={{ cgnat_prefix_str }} gateway={{ cgnat_gateway }} dns-server={{ ctx.mikrotik.system.dns.servers[0] }}
+
+# Firewall rules for CGNAT subnet
+/ip firewall filter
+add chain=forward src-address={{ cgnat_prefix_str }} out-interface={{ BR_WAN }} action=accept comment="Allow CGNAT to Internet" place-before=0
+
+# NAT rule for CGNAT subnet
+/ip firewall nat
+add action=masquerade chain=srcnat comment="NAT for CGNAT subnet" out-interface={{ BR_WAN }} src-address={{ cgnat_prefix_str }}
+{% else %}
+# CGNAT: Check NetBox for CGNAT prefix (role=CGNAT) and gateway IP (tag=cgnat-gateway-ip)
+{% endif %}
+
+{# DIGI DHCP CONFIGURATION SECTION #}
+{% if digi_prefix_str and digi_gateway %}
+# DIGI Management Bridge and DHCP Configuration - Using Site Prefix {{ digi_prefix_str }}
+/interface bridge
+add name=BR-DIGI-mgmt
+
+# Add ether1 to DIGI management bridge
+/interface bridge port
+add bridge=BR-DIGI-mgmt interface=ether1
+
+# DIGI Bridge IP Configuration
+{% set digi_network_ip = digi_prefix_str.split('/')[0] %}
+/ip address
+add address={{ digi_gateway }}/{{ digi_prefix_length }} interface=BR-DIGI-mgmt network={{ digi_network_ip }}
+
+# DIGI DHCP Pool
+{% set digi_octets = digi_prefix_str.split('/')[0].split('.') %}
+{% set digi_host_ip = digi_octets[0] ~ '.' ~ digi_octets[1] ~ '.' ~ digi_octets[2] ~ '.' ~ (digi_octets[3]|int + 2) %}
+/ip pool
+add name=BR-DIGI-mgmt ranges={{ digi_host_ip }}-{{ digi_host_ip }}
+
+# DIGI DHCP Server
+/ip dhcp-server
+add address-pool=BR-DIGI-mgmt interface=BR-DIGI-mgmt name=DIGI-mgmt
+
+# DIGI DHCP Network
+/ip dhcp-server network
+add address={{ digi_prefix_str }} gateway={{ digi_gateway }} dns-server=1.1.1.1 netmask=30
+
+# Firewall rules for DIGI-mgmt subnet
+/ip firewall filter
+add chain=forward src-address={{ digi_prefix_str }} out-interface={{ BR_WAN }} action=accept comment="Allow DIGI-mgmt to Internet" place-before=0
+
+# NAT rule for DIGI-mgmt subnet
+/ip firewall nat
+add action=masquerade chain=srcnat comment="NAT for DIGI-mgmt subnet" out-interface={{ BR_WAN }} src-address={{ digi_prefix_str }}
+{% else %}
+# DIGI: Check NetBox for digi prefix (tag=digi)
+{% endif %}
+
+### System Settings
+/system note
+set note="Property of Resibridge Inc" show-at-cli-login=yes
+
+/system routerboard settings
+set enter-setup-on=delete-key
+
+/tool romon
+set enabled=yes
+
+{% endwith %}

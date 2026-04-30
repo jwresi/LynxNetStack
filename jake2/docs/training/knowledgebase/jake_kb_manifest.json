@@ -1,0 +1,1106 @@
+{
+  "dataset_name": "jake_kb_manifest",
+  "version": "2026-04-09",
+  "root": "old_jake_repo_root",
+  "record_count": 122,
+  "records": [
+    {
+      "relative_path": "docs/JAKE_API.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "repo_doc",
+      "reason": "repo or integration documentation"
+    },
+    {
+      "relative_path": "docs/JAKE_NETBOX_MCP_SETUP.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "repo_doc",
+      "reason": "repo or integration documentation"
+    },
+    {
+      "relative_path": "docs/JAKE_REPO_INDEX.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "repo_doc",
+      "reason": "repo or integration documentation"
+    },
+    {
+      "relative_path": "docs/README.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "repo_doc",
+      "reason": "repo or integration documentation"
+    },
+    {
+      "relative_path": "docs/SAVOY_OLT_FIELD_NOTES_2026-04-02.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "field_notes",
+      "reason": "site field notes"
+    },
+    {
+      "relative_path": "docs/controllers/CNWAVE_CONTROLLER_WIRING_2026-04-09.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "controller_doc",
+      "reason": "controller and tool surface documentation"
+    },
+    {
+      "relative_path": "docs/controllers/LYNXMSP_DHCP_WIRING_2026-04-09.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "controller_doc",
+      "reason": "controller and tool surface documentation"
+    },
+    {
+      "relative_path": "docs/controllers/OLT_CLI_DISCOVERY_2026-04-03.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "controller_doc",
+      "reason": "controller and tool surface documentation"
+    },
+    {
+      "relative_path": "docs/controllers/POSITRON_CLI_DISCOVERY_2026-04-03.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "controller_doc",
+      "reason": "controller and tool surface documentation"
+    },
+    {
+      "relative_path": "docs/controllers/README.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "controller_doc",
+      "reason": "controller and tool surface documentation"
+    },
+    {
+      "relative_path": "docs/controllers/ROUTEROS_ACCESS_MCP_BATCH1_2026-04-04.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "controller_doc",
+      "reason": "controller and tool surface documentation"
+    },
+    {
+      "relative_path": "docs/controllers/ROUTEROS_DISPATCH_MCP_2026-04-04.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "controller_doc",
+      "reason": "controller and tool surface documentation"
+    },
+    {
+      "relative_path": "docs/controllers/ROUTEROS_OPS_MCP_BATCH6_2026-04-04.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "controller_doc",
+      "reason": "controller and tool surface documentation"
+    },
+    {
+      "relative_path": "docs/controllers/ROUTEROS_PLATFORM_MCP_BATCH5_2026-04-04.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "controller_doc",
+      "reason": "controller and tool surface documentation"
+    },
+    {
+      "relative_path": "docs/controllers/ROUTEROS_ROUTING_MCP_BATCH3_2026-04-04.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "controller_doc",
+      "reason": "controller and tool surface documentation"
+    },
+    {
+      "relative_path": "docs/controllers/ROUTEROS_SWITCHING_MCP_BATCH2_2026-04-04.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "controller_doc",
+      "reason": "controller and tool surface documentation"
+    },
+    {
+      "relative_path": "docs/controllers/ROUTEROS_WIRELESS_MCP_BATCH4_2026-04-04.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "controller_doc",
+      "reason": "controller and tool surface documentation"
+    },
+    {
+      "relative_path": "docs/controllers/SWOS_SWITCHING_MCP_BATCH1_2026-04-04.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "controller_doc",
+      "reason": "controller and tool surface documentation"
+    },
+    {
+      "relative_path": "docs/controllers/TAUC_MCP.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "controller_doc",
+      "reason": "controller and tool surface documentation"
+    },
+    {
+      "relative_path": "docs/controllers/TP_LINK_ONU_SUBSCRIBER_JOIN_WORKFLOW_2026-04-03.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "controller_doc",
+      "reason": "controller and tool surface documentation"
+    },
+    {
+      "relative_path": "docs/controllers/VILO_API_SURFACE_2026-04-03.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "controller_doc",
+      "reason": "controller and tool surface documentation"
+    },
+    {
+      "relative_path": "docs/controllers/VILO_API_SURFACE_2026-04-08.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "controller_doc",
+      "reason": "controller and tool surface documentation"
+    },
+    {
+      "relative_path": "docs/controllers/VILO_PORTAL_AUTH_2026-04-08.md",
+      "include_in_rag": false,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": false,
+      "source_class": "controller_doc",
+      "reason": "auth reference kept out of RAG to avoid retrieval pollution"
+    },
+    {
+      "relative_path": "docs/external/official/CNWAVE_CNMAESTRO_E2E_MANAGEMENT_2026-04-10.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "reference",
+      "reason": "official external documentation staged for RAG"
+    },
+    {
+      "relative_path": "docs/external/official/MIKROTIK_CAPSMAN_AND_VLANS_2026-04-10.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "reference",
+      "reason": "official external documentation staged for RAG"
+    },
+    {
+      "relative_path": "docs/external/official/ROUTEROS_RELEASE_TREE_2026-04-10.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "reference",
+      "reason": "official external documentation staged for RAG"
+    },
+    {
+      "relative_path": "docs/external/official/TP_LINK_HC220_G5_OFFICIAL_2026-04-10.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "reference",
+      "reason": "official external documentation staged for RAG"
+    },
+    {
+      "relative_path": "docs/external/official/VILO_OFFICIAL_SETUP_AND_SUPPORT_2026-04-10.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "reference",
+      "reason": "official external documentation staged for RAG"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_000004_FULL_PROCESS_Q1_Q50.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_000022_FULL_PROCESS_Q1_Q50.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_50_QUESTION_CAPABILITY_AUDIT.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_50_QUESTION_KNOWLEDGE_CHECK_2026-04-03.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_50_QUESTION_REGRESSION_CHECKLIST.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_ADVANCED_50_QUESTION_STRESS_TEST_2026-04-05.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": false,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "Jake improvement material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_API.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "jake_doc",
+      "reason": "Jake usage/documentation"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_CORRELATED_ROOT_CAUSE_Q1_Q50.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_CPE_KNOWLEDGE_PACK.md",
+      "include_in_rag": true,
+      "training_candidate": true,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "jake_doc",
+      "reason": "operator behavior and knowledge source"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_CROSS_SYSTEM_CORRELATION_CAPABILITY_AUDIT.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_CROSS_SYSTEM_CORRELATION_CHECKLIST.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_CROSS_SYSTEM_CORRELATION_Q1_Q50.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_CROSS_SYSTEM_KNOWLEDGE_CHECK_2026-04-03.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_FIELD_CONVERSATION_TRAINING_2026-04-05.md",
+      "include_in_rag": true,
+      "training_candidate": true,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "jake_doc",
+      "reason": "operator behavior and knowledge source"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_FIELD_CONVERSATION_TRAINING_2026-04-08.md",
+      "include_in_rag": true,
+      "training_candidate": true,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "jake_doc",
+      "reason": "operator behavior and knowledge source"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_MIKROTIK_KNOWLEDGE_PACK.md",
+      "include_in_rag": true,
+      "training_candidate": true,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "jake_doc",
+      "reason": "operator behavior and knowledge source"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_MIXED_PATH_COMPLEXITY_CAPABILITY_AUDIT.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_MIXED_PATH_COMPLEXITY_CHECKLIST.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_MIXED_PATH_COMPLEXITY_KNOWLEDGE_CHECK_2026-04-03.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_MIXED_PATH_COMPLEXITY_Q1_Q50.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_MLX_BOOTSTRAP_2026-04-10.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": false,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "Jake improvement material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_MLX_EVAL_FIRSTPASS_2026-04-10.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": false,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "Jake improvement material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_MLX_FIRSTPASS_RESULT_2026-04-10.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": false,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "Jake improvement material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_MULTI_SOURCE_METRICS_CAPABILITY_AUDIT.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_MULTI_SOURCE_METRICS_CHECKLIST.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_MULTI_SOURCE_METRICS_KNOWLEDGE_CHECK_2026-04-03.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_MULTI_SOURCE_METRICS_Q1_Q50.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_NETBOX_COVERAGE_BACKLOG_2026-04-09.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": false,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "Jake improvement material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_NETWORK_FOUNDATIONS_Q1_Q26.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_NETWORK_OPERATIONS_Q27_Q50.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_NOC_TRAINING_VARIANTS_INDEX_2026-04-09.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": false,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "Jake improvement material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_OPERATOR_LEARNED_NOTES.md",
+      "include_in_rag": true,
+      "training_candidate": true,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "jake_doc",
+      "reason": "operator behavior and knowledge source"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_OPERATOR_STRESS_TEST_CAPABILITY_AUDIT.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_OPERATOR_STRESS_TEST_CHECKLIST.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_OPERATOR_STRESS_TEST_KNOWLEDGE_CHECK_2026-04-03.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_OPERATOR_STRESS_TEST_Q1_Q50.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_ROUTEROS_7_18_VALIDATION_2026-04-03.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": false,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "Jake improvement material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_ROUTEROS_OPERATOR_Q1_Q40.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_SELF_CONTAINMENT_GAPS_2026-04-09.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": false,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "Jake improvement material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_SOAK_PROMPTS_2026-04-04.json",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "prompt bank for training and eval"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_SOAK_PROMPTS_2026-04-05.json",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "prompt bank for training and eval"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_SOAK_PROMPTS_2026-04-08.json",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "prompt bank for training and eval"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_UNSLOTH_BOOTSTRAP_2026-04-09.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": false,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "Jake improvement material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_VILO_TPLINK_OPERATOR_WORKFLOWS_2026-04-03.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": false,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "Jake improvement material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_WIRELESS_SWITCHING_FIBER_CAPABILITY_AUDIT.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_WIRELESS_SWITCHING_FIBER_CHECKLIST.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_WIRELESS_SWITCHING_FIBER_KNOWLEDGE_CHECK_2026-04-03.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/JAKE_WIRELESS_SWITCHING_FIBER_Q1_Q50.md",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": true,
+      "authoritative": false,
+      "source_class": "jake_doc",
+      "reason": "eval and assessment material"
+    },
+    {
+      "relative_path": "docs/jake/README.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "jake_doc",
+      "reason": "Jake usage/documentation"
+    },
+    {
+      "relative_path": "docs/network_fault_scenarios.docx",
+      "include_in_rag": false,
+      "training_candidate": true,
+      "eval_only": false,
+      "authoritative": false,
+      "source_class": "raw_training_source",
+      "reason": "raw scenario source; prefer extracted markdown for RAG"
+    },
+    {
+      "relative_path": "docs/runbooks/PER_CUSTOMER_VLAN_ISOLATION_ROLLOUT.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "runbook",
+      "reason": "operator runbook"
+    },
+    {
+      "relative_path": "docs/runbooks/README.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "runbook",
+      "reason": "operator runbook"
+    },
+    {
+      "relative_path": "docs/runbooks/SAVOY_MIDNIGHT_SAFE_MODE_RUNBOOK_2026-04-03.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "runbook",
+      "reason": "operator runbook"
+    },
+    {
+      "relative_path": "docs/runbooks/reenable_onu.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "runbook",
+      "reason": "operator runbook"
+    },
+    {
+      "relative_path": "docs/sites/1588_STERLING_PORT_MAP_2026-04-08.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "site_doc",
+      "reason": "site-specific operational knowledge"
+    },
+    {
+      "relative_path": "docs/sites/CHENOWETH_MISSING_UNIT_CANDIDATES_2026-04-04.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "site_doc",
+      "reason": "site-specific operational knowledge"
+    },
+    {
+      "relative_path": "docs/sites/NETWORK_AUDIT_2026-02-24.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "site_doc",
+      "reason": "site-specific operational knowledge"
+    },
+    {
+      "relative_path": "docs/sites/NYCHA_NETWORK_TOPOLOGY_2026-03-13.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "site_doc",
+      "reason": "site-specific operational knowledge"
+    },
+    {
+      "relative_path": "docs/sites/NYCHA_TPLINK_RECOVERY_CANDIDATES_2026-04-04.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "site_doc",
+      "reason": "site-specific operational knowledge"
+    },
+    {
+      "relative_path": "docs/sites/NYCHA_VILO_RECOVERY_CANDIDATES_2026-04-03.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "site_doc",
+      "reason": "site-specific operational knowledge"
+    },
+    {
+      "relative_path": "docs/sites/README.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "site_doc",
+      "reason": "site-specific operational knowledge"
+    },
+    {
+      "relative_path": "docs/sites/SAVOY_OLT_LABELING_RUNBOOK_2026-04-06.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "site_doc",
+      "reason": "site-specific operational knowledge"
+    },
+    {
+      "relative_path": "docs/sites/SITE_000005_OPTICAL_WORKUP_2026-04-09.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "site_doc",
+      "reason": "site-specific operational knowledge"
+    },
+    {
+      "relative_path": "docs/sites/SITE_000006_OPTICAL_WORKUP_2026-04-09.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "site_doc",
+      "reason": "site-specific operational knowledge"
+    },
+    {
+      "relative_path": "docs/sites/SITE_000010_QUIET_SITE_BASELINE_2026-04-09.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "site_doc",
+      "reason": "site-specific operational knowledge"
+    },
+    {
+      "relative_path": "docs/sites/SITE_000014_OPTICAL_WORKUP_2026-04-09.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "site_doc",
+      "reason": "site-specific operational knowledge"
+    },
+    {
+      "relative_path": "docs/sites/SITE_000015_OPTICAL_WORKUP_2026-04-09.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "site_doc",
+      "reason": "site-specific operational knowledge"
+    },
+    {
+      "relative_path": "docs/sites/SITE_000016_OPTICAL_WORKUP_2026-04-09.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "site_doc",
+      "reason": "site-specific operational knowledge"
+    },
+    {
+      "relative_path": "docs/sites/SITE_000017_INFRA_HANDOFF_2026-04-09.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "site_doc",
+      "reason": "site-specific operational knowledge"
+    },
+    {
+      "relative_path": "docs/sites/SITE_000018_INFRA_HANDOFF_2026-04-09.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "site_doc",
+      "reason": "site-specific operational knowledge"
+    },
+    {
+      "relative_path": "docs/sites/SITE_000019_INFRA_HANDOFF_2026-04-09.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "site_doc",
+      "reason": "site-specific operational knowledge"
+    },
+    {
+      "relative_path": "docs/sites/SITE_000020_QUIET_SITE_BASELINE_2026-04-09.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "site_doc",
+      "reason": "site-specific operational knowledge"
+    },
+    {
+      "relative_path": "docs/sites/SITE_000023_INFRA_HANDOFF_2026-04-09.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "site_doc",
+      "reason": "site-specific operational knowledge"
+    },
+    {
+      "relative_path": "docs/sites/SITE_000024_INFRA_HANDOFF_2026-04-09.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "site_doc",
+      "reason": "site-specific operational knowledge"
+    },
+    {
+      "relative_path": "docs/sites/SITE_000025_INFRA_HANDOFF_2026-04-09.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "site_doc",
+      "reason": "site-specific operational knowledge"
+    },
+    {
+      "relative_path": "docs/training/mikrotik_training_corpus.json",
+      "include_in_rag": true,
+      "training_candidate": true,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "training_corpus",
+      "reason": "structured knowledge corpus"
+    },
+    {
+      "relative_path": "docs/training/mikrotik_training_corpus.md",
+      "include_in_rag": true,
+      "training_candidate": true,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "training_corpus",
+      "reason": "structured knowledge corpus"
+    },
+    {
+      "relative_path": "docs/training/network_fault_scenarios_extracted.md",
+      "include_in_rag": true,
+      "training_candidate": true,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "training_corpus",
+      "reason": "structured knowledge corpus"
+    },
+    {
+      "relative_path": "references/NETWORK_MAP.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "reference",
+      "reason": "vendored technical reference"
+    },
+    {
+      "relative_path": "references/crs-vlan-detective/README.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "reference",
+      "reason": "vendored technical reference"
+    },
+    {
+      "relative_path": "references/crs-vlan-detective/agent.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "reference",
+      "reason": "vendored technical reference"
+    },
+    {
+      "relative_path": "references/ros7_form.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "reference",
+      "reason": "vendored technical reference"
+    },
+    {
+      "relative_path": "references/tikbreak/000001.R1.rsc",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "reference",
+      "reason": "vendored technical reference"
+    },
+    {
+      "relative_path": "references/tikbreak/000003.R1.rsc",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "reference",
+      "reason": "vendored technical reference"
+    },
+    {
+      "relative_path": "references/tikbreak/000004.R1.rsc",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "reference",
+      "reason": "vendored technical reference"
+    },
+    {
+      "relative_path": "references/tikfig/README.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "reference",
+      "reason": "vendored technical reference"
+    },
+    {
+      "relative_path": "references/tools.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "reference",
+      "reason": "vendored technical reference"
+    },
+    {
+      "relative_path": "references/tools_code.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "reference",
+      "reason": "vendored technical reference"
+    },
+    {
+      "relative_path": "references/vendor/LynxMSP/ARCHITECTURE_RESTRUCTURE_PLAN.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "reference",
+      "reason": "vendored sibling-project reference kept local to Jake"
+    },
+    {
+      "relative_path": "references/vendor/LynxMSP/README.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "reference",
+      "reason": "vendored sibling-project reference kept local to Jake"
+    },
+    {
+      "relative_path": "references/vendor/LynxMSP/README_original.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "reference",
+      "reason": "vendored sibling-project reference kept local to Jake"
+    },
+    {
+      "relative_path": "references/vendor/LynxMSP/SPLYNX_KEY_ENDPOINTS.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "reference",
+      "reason": "vendored sibling-project reference kept local to Jake"
+    },
+    {
+      "relative_path": "references/vendor/LynxMSP/requirements.txt",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "reference",
+      "reason": "vendored sibling-project reference kept local to Jake"
+    },
+    {
+      "relative_path": "references/vendor/lynxdhcp/README.md",
+      "include_in_rag": true,
+      "training_candidate": false,
+      "eval_only": false,
+      "authoritative": true,
+      "source_class": "reference",
+      "reason": "vendored sibling-project reference kept local to Jake"
+    }
+  ]
+}

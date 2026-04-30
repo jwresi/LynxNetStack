@@ -1,0 +1,19 @@
+[Unit]
+Description=Kea DHCP Lease Sync to NetBox
+After=network.target
+
+[Service]
+Type=simple
+User=resibridge
+WorkingDirectory=/opt/lynxnetstack/kea-sync
+Environment=KEA_API_URL=http://172.27.28.50:8000
+Environment=NETBOX_URL=http://172.27.48.233:8001
+EnvironmentFile=/opt/lynxnetstack/kea-sync/.env
+ExecStart=/opt/lynxnetstack/kea-sync/.venv/bin/python lease_poller.py
+Restart=on-failure
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

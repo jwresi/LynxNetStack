@@ -1,0 +1,14 @@
+[
+  {
+    "raw": "what needs to be fixed at nycha",
+    "expected_intent": "get_site_punch_list",
+    "expected_site": "000007",
+    "notes": "Direct site punch-list phrasing for NYCHA."
+  },
+  {
+    "raw": "give me the field-tech punch list for 000007",
+    "expected_intent": "get_site_punch_list",
+    "expected_site": "000007",
+    "notes": "Variant field-tech phrasing from the old scripts copy."
+  }
+]

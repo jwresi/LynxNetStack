@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+set -eu
+
+: "${JAKE_OPS_DB:=data/network_map.db}"
+
+if [ -x ".venv/bin/python" ]; then
+  exec env PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}." JAKE_OPS_DB="$JAKE_OPS_DB" .venv/bin/python scripts/run_jake.py "$@"
+fi
+
+exec env PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}." JAKE_OPS_DB="$JAKE_OPS_DB" python3 scripts/run_jake.py "$@"

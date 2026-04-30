@@ -1,0 +1,20 @@
+
+
+
+
+
+
+
+
+
+
+
+
+Address,Unit,PPPoE,MAC Address,AP Make,AP Serial Number,Opt-Outs,Progress,Scan
+123-125 Test St,1A,site-1A,AA:11:22:33:44:55,Vilo,VILO-1A,,COMPLETE,
+123-125 Test St,1B,site-1B,10:22:33:44:55:66,TP-Link,HC220-1B,,COMPLETE,
+123-125 Test St,1C,site-1C,20:22:33:44:55:60,TP-Link,HC220-1C,,COMPLETE,
+123-125 Test St,1D,site-1D,30:22:33:44:55:70,Vilo,VILO-1D,,COMPLETE,
+123-125 Test St,1E,site-1E,40:22:33:44:55:80,Vilo,VILO-1E,,COMPLETE,
+123-125 Test St,1F,site-1F,50:22:33:44:55:90,TP-Link,HC220-1F,,COMPLETE,
+123-125 Test St,1G,site-1A,AA:11:22:33:44:55,Vilo,VILO-1A,,COMPLETE,

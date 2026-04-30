@@ -1,0 +1,14 @@
+[
+  {
+    "raw": "what is wrong with DC:62:79:9D:C1:AD",
+    "expected_intent": "get_cpe_state",
+    "expected_site": null,
+    "notes": "Production failing query. Should resolve directly to CPE state by MAC."
+  },
+  {
+    "raw": "does the CPE DC:62:79:9D:C1:AD seem healthy",
+    "expected_intent": "get_cpe_state",
+    "expected_site": null,
+    "notes": "Production failing health phrasing. Same deterministic action as the direct fault query."
+  }
+]

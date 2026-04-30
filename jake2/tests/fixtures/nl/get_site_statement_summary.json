@@ -1,0 +1,8 @@
+[
+  {
+    "raw": "Chenoweth is running dhcp",
+    "expected_intent": "get_site_summary",
+    "expected_site": "000008",
+    "notes": "Declarative site-state statement should map to a direct site summary instead of a clarification path."
+  }
+]

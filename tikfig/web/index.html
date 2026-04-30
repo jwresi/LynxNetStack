@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tikfig Installer</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="backdrop"></div>
+    <main class="shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">ResiBridge Field Toolkit</p>
+          <h1>Tikfig Installer</h1>
+          <p class="subhead">Guided MikroTik provisioning with live device discovery and NetBox context.</p>
+        </div>
+        <div class="status-card" id="discovery-card">
+          <p class="status-label">Device link</p>
+          <p class="status" id="discovery-status">Checking...</p>
+          <p class="status-meta" id="discovery-meta">Waiting for signal</p>
+        </div>
+      </header>
+
+      <section class="wizard">
+        <nav class="steps" id="steps">
+          <button class="step active" data-step="1">1. Detect</button>
+          <button class="step" data-step="2">2. NetBox</button>
+          <button class="step" data-step="3">3. Configure</button>
+          <button class="step" data-step="4">4. Output</button>
+        </nav>
+
+        <div class="panel" data-panel="1">
+          <h2>Plug in and confirm</h2>
+          <p>Connect your laptop to the defaulted device. Tikfig will auto-detect when it is reachable on the default API address.</p>
+          <div class="callout">
+            <div>
+              <p class="callout-title">Live discovery</p>
+              <p class="callout-body" id="callout-body">Waiting for device...</p>
+            </div>
+            <button class="primary" id="refresh-discovery">Recheck now</button>
+          </div>
+        </div>
+
+        <div class="panel hidden" data-panel="2">
+          <h2>Load device from NetBox</h2>
+          <p>Look up the device to pre-fill config context and templates.</p>
+          <div class="form-grid">
+            <label>
+              Device name
+              <input type="text" id="device-name" placeholder="RB-1234" />
+            </label>
+            <label>
+              Role
+              <select id="device-role">
+                <option value="switch">Switch</option>
+                <option value="router">Router</option>
+              </select>
+            </label>
+          </div>
+          <div class="actions">
+            <button class="secondary" id="lookup-device">Fetch from NetBox</button>
+            <span class="note" id="device-note">Awaiting lookup.</span>
+          </div>
+          <div class="device-summary" id="device-summary"></div>
+        </div>
+
+        <div class="panel hidden" data-panel="3">
+          <h2>Fill in install-specific values</h2>
+          <p>Override any fields that are not stored in NetBox.</p>
+          <div class="form-grid">
+            <label>
+              CGNAT prefix
+              <input type="text" id="cgnat-prefix" placeholder="100.64.0.0/24" />
+            </label>
+            <label>
+              CGNAT gateway
+              <input type="text" id="cgnat-gateway" placeholder="100.64.0.1" />
+            </label>
+            <label>
+              Digi prefix
+              <input type="text" id="digi-prefix" placeholder="10.0.10.0/30" />
+            </label>
+            <label>
+              Digi gateway
+              <input type="text" id="digi-gateway" placeholder="10.0.10.1" />
+            </label>
+            <label>
+              Digi prefix length
+              <input type="number" id="digi-prefix-length" placeholder="30" />
+            </label>
+            <label>
+              Model override
+              <input type="text" id="model-override" placeholder="CRS326-24G-2S+" />
+            </label>
+          </div>
+          <div class="actions">
+            <button class="primary" id="generate-config">Generate config</button>
+            <span class="note" id="render-note">Ready to render.</span>
+          </div>
+        </div>
+
+        <div class="panel hidden" data-panel="4">
+          <h2>Provisioning output</h2>
+          <p>Copy or download the rendered RouterOS config, then apply it using your preferred method.</p>
+          <div class="output">
+            <pre id="rendered-output">No output yet.</pre>
+          </div>
+          <div class="actions">
+            <button class="secondary" id="download-config">Download .rsc</button>
+            <span class="note" id="download-note">Render a config to enable download.</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

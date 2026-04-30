@@ -1,0 +1,14 @@
+[
+  {
+    "raw": "why did customers drop at chenoweth",
+    "expected_intent": "correlate_event_window",
+    "expected_site": "000008",
+    "notes": "site event correlation"
+  },
+  {
+    "raw": "why did subscribers drop at nycha",
+    "expected_intent": "correlate_event_window",
+    "expected_site": "000007",
+    "notes": "subscriber drop phrasing"
+  }
+]

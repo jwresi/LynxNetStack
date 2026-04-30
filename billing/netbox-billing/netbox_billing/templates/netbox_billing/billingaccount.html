@@ -1,0 +1,139 @@
+{% extends 'generic/object.html' %}
+{% load i18n %}
+{% load render_table from django_tables2 %}
+
+{% block content %}
+<div class="row mb-3">
+  <div class="col col-md-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+          <strong>{{ object.tenant.name }}</strong>
+          <span class="text-muted ms-2">Account balance: {{ object.account_balance }}</span>
+        </div>
+        <div>
+          {% if profile %}
+          <a href="{% url 'plugins:netbox_billing:customerprofile_edit' pk=profile.pk %}" class="btn btn-sm btn-primary">Edit Profile</a>
+          {% else %}
+          <a href="{% url 'plugins:netbox_billing:customerprofile_add' %}?account={{ object.pk }}" class="btn btn-sm btn-primary">Create Profile</a>
+          {% endif %}
+        </div>
+      </div>
+      <ul class="nav nav-tabs card-header-tabs px-2">
+        <li class="nav-item"><a class="nav-link {% if active_tab == 'information' %}active{% endif %}" href="?tab=information">Information</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_tab == 'services' %}active{% endif %}" href="?tab=services">Services</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_tab == 'billing' %}active{% endif %}" href="?tab=billing">Billing</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_tab == 'documents' %}active{% endif %}" href="?tab=documents">Documents</a></li>
+        <li class="nav-item"><a class="nav-link {% if active_tab == 'communication' %}active{% endif %}" href="?tab=communication">Communication</a></li>
+      </ul>
+
+      <div class="card-body">
+        {% if active_tab == 'information' %}
+          {% if profile %}
+          <div class="row">
+            <div class="col col-md-6">
+              <table class="table table-hover attr-table">
+                <tr><th>Portal login</th><td>{{ profile.portal_login|default:'-' }}</td></tr>
+                <tr><th>Full name</th><td>{{ profile.full_name|default:'-' }}</td></tr>
+                <tr><th>Email</th><td>{{ profile.email|default:'-' }}</td></tr>
+                <tr><th>Billing email</th><td>{{ profile.billing_email|default:'-' }}</td></tr>
+                <tr><th>Phone number</th><td>{{ profile.phone_number|default:'-' }}</td></tr>
+                <tr><th>Billing type</th><td>{{ profile.get_billing_type_display }}</td></tr>
+                <tr><th>Partner</th><td>{{ profile.partner|default:'-' }}</td></tr>
+                <tr><th>Location</th><td>{{ profile.location|default:'-' }}</td></tr>
+                <tr><th>Address</th><td>{{ profile.street|default:'-' }} {{ profile.city|default:'' }} {{ profile.state_province|default:'' }} {{ profile.zip_code|default:'' }}</td></tr>
+                <tr><th>Unit #</th><td>{{ profile.unit_number|default:'-' }}</td></tr>
+              </table>
+            </div>
+            <div class="col col-md-6">
+              <table class="table table-hover attr-table">
+                <tr><th>Category</th><td>{{ profile.category|default:'-' }}</td></tr>
+                <tr><th>Date of birth</th><td>{{ profile.date_of_birth|default:'-' }}</td></tr>
+                <tr><th>Identification</th><td>{{ profile.identification|default:'-' }}</td></tr>
+                <tr><th>Preferred payment</th><td>{{ profile.get_preferred_payment_display }}</td></tr>
+                <tr><th>Preferred install days</th><td>{{ profile.preferred_installation_days|default:'-' }}</td></tr>
+                <tr><th>TV package interest</th><td>{{ profile.tv_content_interest|default:'-' }}</td></tr>
+                <tr><th>Coverage notes</th><td>{{ profile.coverage_notes|default:'-' }}</td></tr>
+                <tr><th>Network device</th><td>{{ profile.network_device|default:'-' }}</td></tr>
+                <tr><th>Comment</th><td>{{ profile.comment|default:'-' }}</td></tr>
+              </table>
+            </div>
+          </div>
+          {% else %}
+          <div class="alert alert-warning mb-0">No customer profile is linked to this account yet.</div>
+          {% endif %}
+
+        {% elif active_tab == 'services' %}
+          <div class="mb-2">
+            <a href="{% url 'plugins:netbox_billing:subscription_add' %}?account={{ object.pk }}" class="btn btn-sm btn-primary">Add service</a>
+          </div>
+          {% render_table subscriptions_table %}
+
+        {% elif active_tab == 'billing' %}
+          <div class="row mb-3">
+            <div class="col col-md-6">
+              <div class="card">
+                <h5 class="card-header">Total invoiced</h5>
+                <table class="table table-hover mb-0">
+                  <thead>
+                    <tr><th>Status</th><th>Count</th><th>Total</th></tr>
+                  </thead>
+                  <tbody>
+                    {% for label, stats in invoice_totals_by_status.items %}
+                    <tr><td>{{ label }}</td><td>{{ stats.count }}</td><td>{{ stats.total }}</td></tr>
+                    {% endfor %}
+                    <tr><th>Total</th><th></th><th>{{ total_invoiced }}</th></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="col col-md-6">
+              <div class="card">
+                <h5 class="card-header">Total paid</h5>
+                <table class="table table-hover mb-0">
+                  <thead>
+                    <tr><th>Type</th><th>Count</th><th>Total</th></tr>
+                  </thead>
+                  <tbody>
+                    {% for label, stats in paid_totals_by_method.items %}
+                    <tr><td>{{ label }}</td><td>{{ stats.count }}</td><td>{{ stats.total }}</td></tr>
+                    {% endfor %}
+                    <tr><th>Total</th><th></th><th>{{ total_paid }}</th></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-2 d-flex gap-2">
+            <a href="{% url 'plugins:netbox_billing:invoice_add' %}?account={{ object.pk }}" class="btn btn-sm btn-primary">Add document</a>
+            <a href="{% url 'plugins:netbox_billing:payment_add' %}?account={{ object.pk }}" class="btn btn-sm btn-outline-primary">Record payment</a>
+            <a href="{% url 'plugins:netbox_billing:scheduledpayment_add' %}?account={{ object.pk }}" class="btn btn-sm btn-outline-secondary">Schedule payment</a>
+          </div>
+
+          {% render_table invoices_table %}
+          <div class="mt-3"></div>
+          {% render_table payments_table %}
+          <div class="mt-3"></div>
+          {% render_table scheduled_payments_table %}
+
+        {% elif active_tab == 'documents' %}
+          <div class="mb-2">
+            <a href="{% url 'plugins:netbox_billing:customerdocument_add' %}?account={{ object.pk }}" class="btn btn-sm btn-primary">Add document</a>
+          </div>
+          {% render_table documents_table %}
+
+        {% elif active_tab == 'communication' %}
+          <div class="mb-2 d-flex gap-2">
+            <a href="{% url 'plugins:netbox_billing:customercommunication_add' %}?account={{ object.pk }}" class="btn btn-sm btn-primary">Add message</a>
+            <a href="{% url 'plugins:netbox_billing:customernote_add' %}?account={{ object.pk }}" class="btn btn-sm btn-outline-primary">Add to-do</a>
+          </div>
+          {% render_table communications_table %}
+          <div class="mt-3"></div>
+          {% render_table notes_table %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}

@@ -1,0 +1,24 @@
+{
+  "ssh_binary": "ssh",
+  "ssh_options": [
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "StrictHostKeyChecking=accept-new",
+    "-o",
+    "ConnectTimeout=10"
+  ],
+  "default_timeout_sec": 30,
+  "read_only_by_default": true,
+  "allow_write_actions": true,
+  "allow_auto_rollback": false,
+  "host_allowlist": [
+    "savoy-sw01",
+    "mt-edge-01"
+  ],
+  "writable_vendors": [
+    "MikroTik",
+    "Cambium",
+    "LinuxSwitch"
+  ]
+}

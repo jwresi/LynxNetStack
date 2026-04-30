@@ -1,0 +1,14 @@
+[
+  {
+    "raw": "precheck 000008 before I go on site",
+    "expected_intent": "get_site_precheck",
+    "expected_site": "000008",
+    "notes": "Direct field-work precheck phrasing should map to the site precheck action."
+  },
+  {
+    "raw": "what should I verify before touching nycha",
+    "expected_intent": "get_site_precheck",
+    "expected_site": "000007",
+    "notes": "Operator phrasing about verifying a site before touching it should trigger precheck."
+  }
+]

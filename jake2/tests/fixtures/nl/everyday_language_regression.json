@@ -1,0 +1,32 @@
+[
+  {
+    "raw": "how many customers online at 000007",
+    "expected_intent": "get_online_customers",
+    "expected_site": "000007",
+    "notes": "Direct online-count phrasing from the everyday-language regression surface."
+  },
+  {
+    "raw": "what's the live count at the NYCHA site",
+    "expected_intent": "get_online_customers",
+    "expected_site": "000007",
+    "notes": "Alias resolution: NYCHA site language must normalize to 000007."
+  },
+  {
+    "raw": "who's up right now on the big job",
+    "expected_intent": "get_online_customers",
+    "expected_site": "000007",
+    "notes": "Operator shorthand: 'the big job' is a preserved alias for site 000007."
+  },
+  {
+    "raw": "what can you tell me about chenoweth",
+    "expected_intent": "get_site_summary",
+    "expected_site": "000008",
+    "notes": "Site summary intent should map directly to deterministic core action."
+  },
+  {
+    "raw": "which mcp should i use for bridge vlan issues at nycha",
+    "expected_intent": "dispatch_troubleshooting_scenarios",
+    "expected_site": "000007",
+    "notes": "Troubleshooting phrasing should route to the deterministic troubleshooting dispatcher."
+  }
+]

@@ -1,0 +1,400 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ object.tenant.name }} :: resi.billing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'netbox_billing/cx.css' %}">
+</head>
+<body>
+  <main class="cx-app">
+    <header class="cx-topbar">
+      <div>
+        <a href="{% url 'plugins:netbox_billing:cx_dashboard' %}" class="back-link">&larr; back to customers</a>
+        <h1 class="brand">{{ object.tenant.name }}</h1>
+      </div>
+      <a href="{% url 'plugins:netbox_billing:billingaccount_list' %}?eng=1" class="link-engineer">engineer view</a>
+    </header>
+
+    <nav class="view-nav">
+      <a href="?tab=information" class="{% if active_tab == 'information' %}active{% endif %}">information</a>
+      <a href="?tab=services" class="{% if active_tab == 'services' %}active{% endif %}">services</a>
+      <a href="?tab=tickets" class="{% if active_tab == 'tickets' %}active{% endif %}">tickets</a>
+      <a href="?tab=billing" class="{% if active_tab == 'billing' %}active{% endif %}">billing</a>
+      <a href="?tab=documents" class="{% if active_tab == 'documents' %}active{% endif %}">documents</a>
+      <a href="?tab=communication" class="{% if active_tab == 'communication' %}active{% endif %}">messages</a>
+      <a href="{% url 'plugins:netbox_billing:cx_onboarding' %}">onboarding</a>
+      <a href="{% url 'plugins:netbox_billing:cx_catalog' %}">catalog</a>
+    </nav>
+
+    {% if messages %}
+    <section class="cx-messages">
+      {% for message in messages %}
+      <div class="cx-message {{ message.tags|default:'info' }}">{{ message }}</div>
+      {% endfor %}
+    </section>
+    {% endif %}
+
+    <section class="cx-stats-line">
+      <div>[ status: {{ object.get_status_display }} ]</div>
+      <div>[ payment: {{ object.get_preferred_payment_method_display }} ]</div>
+      <div>[ account balance: {{ object.account_balance }} ]</div>
+    </section>
+
+    <section class="cx-actions">
+      <a href="{% url 'plugins:netbox_billing:cx_edit' model='billingaccount' pk=object.pk %}?next={{ request.get_full_path|urlencode }}">edit account</a>
+      <a href="{% url 'plugins:netbox_billing:cx_delete' model='billingaccount' pk=object.pk %}?next={{ request.get_full_path|urlencode }}">remove customer</a>
+      {% if profile %}
+      <a href="{% url 'plugins:netbox_billing:cx_edit' model='customerprofile' pk=profile.pk %}?next={{ request.get_full_path|urlencode }}">edit profile</a>
+      <a href="{% url 'plugins:netbox_billing:cx_delete' model='customerprofile' pk=profile.pk %}?next={{ request.get_full_path|urlencode }}">remove profile</a>
+      {% endif %}
+      <a href="{% url 'plugins:netbox_billing:cx_add' model='subscription' %}?account={{ object.pk }}&next={{ request.get_full_path|urlencode }}">add service</a>
+      <a href="{% url 'plugins:netbox_billing:cx_add' model='invoice' %}?account={{ object.pk }}&next={{ request.get_full_path|urlencode }}">new invoice</a>
+      <a href="{% url 'plugins:netbox_billing:cx_add' model='payment' %}?account={{ object.pk }}&next={{ request.get_full_path|urlencode }}">record payment</a>
+      <a href="{% url 'plugins:netbox_ticketing:serviceticket_add' %}?account={{ object.pk }}&next={{ request.get_full_path|urlencode }}">new ticket</a>
+      <a href="{% url 'plugins:netbox_billing:cx_add' model='customerdocument' %}?account={{ object.pk }}&next={{ request.get_full_path|urlencode }}">add document</a>
+      <a href="{% url 'plugins:netbox_billing:cx_add' model='customercommunication' %}?account={{ object.pk }}&next={{ request.get_full_path|urlencode }}">add message</a>
+      <a href="{% url 'plugins:netbox_billing:cx_add' model='customernote' %}?account={{ object.pk }}&next={{ request.get_full_path|urlencode }}">add to-do</a>
+    </section>
+
+    {% if active_tab == 'information' %}
+    <section class="cx-grid two-col">
+      <article class="cx-panel">
+        <h3>customer info</h3>
+        <dl>
+          <dt>full name</dt><dd>{{ profile.full_name|default:'-' }}</dd>
+          <dt>portal login</dt><dd>{{ profile.portal_login|default:'-' }}</dd>
+          <dt>email</dt><dd>{{ profile.email|default:'-' }}</dd>
+          <dt>billing email</dt><dd>{{ profile.billing_email|default:'-' }}</dd>
+          <dt>phone number</dt><dd>{{ profile.phone_number|default:'-' }}</dd>
+          <dt>billing type</dt><dd>{{ profile.get_billing_type_display|default:'-' }}</dd>
+        </dl>
+      </article>
+      <article class="cx-panel">
+        <h3>address</h3>
+        <dl>
+          <dt>location</dt><dd>{{ profile.location|default:'-' }}</dd>
+          <dt>street</dt><dd>{{ profile.street|default:'-' }}</dd>
+          <dt>city</dt><dd>{{ profile.city|default:'-' }}</dd>
+          <dt>state / province</dt><dd>{{ profile.state_province|default:'-' }}</dd>
+          <dt>zip code</dt><dd>{{ profile.zip_code|default:'-' }}</dd>
+          <dt>unit #</dt><dd>{{ profile.unit_number|default:'-' }}</dd>
+        </dl>
+      </article>
+    </section>
+    {% endif %}
+
+    {% if active_tab == 'services' %}
+    <section class="cx-table-panel">
+      <h3>services</h3>
+      <table class="cx-table">
+        <thead>
+          <tr>
+            <th>status</th>
+            <th>description</th>
+            <th>plan</th>
+            <th>price</th>
+            <th>property / unit</th>
+            <th>cpe</th>
+            <th>service login</th>
+            <th>ipv4</th>
+            <th>actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for service in subscriptions %}
+          <tr>
+            <td>{{ service.get_status_display }}</td>
+            <td>
+              {% if service.tariff_plan and service.tariff_plan.service_description %}
+                {{ service.tariff_plan.service_description }}
+              {% elif service.tariff_bundle and service.tariff_bundle.service_description %}
+                {{ service.tariff_bundle.service_description }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+              {% if service.tariff_plan %}
+                {{ service.tariff_plan }}
+              {% elif service.tariff_bundle %}
+                {{ service.tariff_bundle }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+              {% if service.price_override != None %}
+                {{ service.price_override }}
+              {% elif service.tariff_plan %}
+                {{ service.tariff_plan.monthly_price }}
+              {% elif service.tariff_bundle %}
+                {{ service.tariff_bundle.price }}
+              {% else %}
+                0.00
+              {% endif %}
+            </td>
+            <td>{{ service.unit|default:'-' }}</td>
+            <td>{{ service.cpe_device|default:'-' }}</td>
+            <td>{{ service.service_login|default:'-' }}</td>
+            <td>{{ service.ipv4_address|default:'-' }}</td>
+            <td>
+              <a href="{% url 'plugins:netbox_billing:cx_edit' model='subscription' pk=service.pk %}?next={{ request.get_full_path|urlencode }}">edit</a>
+              <span class="sep">|</span>
+              <a href="{% url 'plugins:netbox_billing:cx_delete' model='subscription' pk=service.pk %}?next={{ request.get_full_path|urlencode }}">remove</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9">no services</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% endif %}
+
+    {% if active_tab == 'tickets' %}
+    <section class="cx-table-panel">
+      <h3>service tickets <a href="/plugins/ticketing/calendar/" style="margin-left:8px;font-size:11px;">open calendar</a></h3>
+      <table class="cx-table">
+        <thead><tr><th>created</th><th>title</th><th>type</th><th>status</th><th>priority</th><th>when</th><th>where</th><th>service</th><th>assigned</th><th>actions</th></tr></thead>
+        <tbody>
+          {% for ticket in tickets %}
+          <tr>
+            <td>{{ ticket.created }}</td>
+            <td>{{ ticket.title }}</td>
+            <td>{{ ticket.get_ticket_type_display }}</td>
+            <td>{{ ticket.get_status_display }}</td>
+            <td>{{ ticket.priority|default:'normal' }}</td>
+            <td>
+              {% if ticket.scheduled_for %}
+                <strong>scheduled</strong> {{ ticket.scheduled_for|date:'Y-m-d H:i' }}
+              {% else %}
+                <strong>unscheduled</strong>
+              {% endif %}
+            </td>
+            <td>
+              {% if ticket.subscription and ticket.subscription.unit and ticket.subscription.unit.property %}
+                {{ ticket.subscription.unit.property.name }} / Unit {{ ticket.subscription.unit.unit_number }}
+              {% elif profile and profile.address %}
+                {{ profile.address }}{% if profile.unit_number %}, Unit {{ profile.unit_number }}{% endif %}
+              {% elif profile and profile.street %}
+                {{ profile.street }}{% if profile.unit_number %}, Unit {{ profile.unit_number }}{% endif %}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>{{ ticket.subscription|default:'-' }}</td>
+            <td>{{ ticket.assigned_to|default:'-' }}</td>
+            <td>
+              <a href="{% url 'plugins:netbox_ticketing:serviceticket_edit' pk=ticket.pk %}?next={{ request.get_full_path|urlencode }}">edit</a>
+              <span class="sep">|</span>
+              <a href="{% url 'plugins:netbox_ticketing:serviceticket_delete' pk=ticket.pk %}?next={{ request.get_full_path|urlencode }}">remove</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="10">no tickets</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% endif %}
+
+    {% if active_tab == 'billing' %}
+    <section class="cx-grid two-col">
+      <article class="cx-panel">
+        <h3>charge now (stripe)</h3>
+        <form method="post" action="{% url 'plugins:netbox_billing:cx_charge_now' pk=object.pk %}" class="cx-form">
+          {% csrf_token %}
+          <label>amount <input type="number" step="0.01" min="0.01" name="amount" required></label>
+          <label>currency
+            <select name="currency"><option value="usd">USD</option><option value="eur">EUR</option></select>
+          </label>
+          <label>invoice
+            <select name="invoice_id"><option value="">none</option>{% for invoice in invoices %}<option value="{{ invoice.pk }}">{{ invoice.number }}</option>{% endfor %}</select>
+          </label>
+          <label>stripe customer id <input type="text" name="stripe_customer_id" value="{{ object.stripe_customer_id }}"></label>
+          <label>stripe payment method id <input type="text" name="stripe_payment_method_id" placeholder="pm_xxx"></label>
+          <button type="submit">run charge now</button>
+        </form>
+      </article>
+      <article class="cx-panel">
+        <h3>schedule payment (stripe)</h3>
+        <form method="post" action="{% url 'plugins:netbox_billing:cx_schedule_payment' pk=object.pk %}" class="cx-form">
+          {% csrf_token %}
+          <label>amount <input type="number" step="0.01" min="0.01" name="amount" required></label>
+          <label>run at <input type="datetime-local" name="run_at" required></label>
+          <label>currency
+            <select name="currency"><option value="usd">USD</option><option value="eur">EUR</option></select>
+          </label>
+          <label>invoice
+            <select name="invoice_id"><option value="">none</option>{% for invoice in invoices %}<option value="{{ invoice.pk }}">{{ invoice.number }}</option>{% endfor %}</select>
+          </label>
+          <label>stripe customer id <input type="text" name="stripe_customer_id" value="{{ object.stripe_customer_id }}"></label>
+          <label>stripe payment method id <input type="text" name="stripe_payment_method_id" placeholder="pm_xxx"></label>
+          <button type="submit">save schedule</button>
+        </form>
+      </article>
+    </section>
+
+    <section class="cx-table-panel">
+      <h3>finance documents</h3>
+      <table class="cx-table">
+        <thead><tr><th>number</th><th>date</th><th>total</th><th>due</th><th>payment</th><th>status</th><th>actions</th></tr></thead>
+        <tbody>
+          {% for invoice in invoices %}
+          <tr>
+            <td>{{ invoice.number }}</td>
+            <td>{{ invoice.date|default:'-' }}</td>
+            <td>{{ invoice.total }}</td>
+            <td>{{ invoice.due_date|default:'-' }}</td>
+            <td>{{ invoice.payment_date|default:'-' }}</td>
+            <td>{{ invoice.get_status_display }}</td>
+            <td>
+              <a href="{% url 'plugins:netbox_billing:cx_edit' model='invoice' pk=invoice.pk %}?next={{ request.get_full_path|urlencode }}">edit</a>
+              <span class="sep">|</span>
+              <a href="{% url 'plugins:netbox_billing:cx_delete' model='invoice' pk=invoice.pk %}?next={{ request.get_full_path|urlencode }}">remove</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7">no finance documents</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="cx-table-panel">
+      <h3>payments</h3>
+      <table class="cx-table">
+        <thead><tr><th>date</th><th>amount</th><th>method</th><th>reference</th><th>actions</th></tr></thead>
+        <tbody>
+          {% for payment in payments %}
+          <tr>
+            <td>{{ payment.paid_at|default:'-' }}</td>
+            <td>{{ payment.amount }}</td>
+            <td>{{ payment.get_method_display }}</td>
+            <td>{{ payment.reference|default:'-' }}</td>
+            <td>
+              <a href="{% url 'plugins:netbox_billing:cx_edit' model='payment' pk=payment.pk %}?next={{ request.get_full_path|urlencode }}">edit</a>
+              <span class="sep">|</span>
+              <a href="{% url 'plugins:netbox_billing:cx_delete' model='payment' pk=payment.pk %}?next={{ request.get_full_path|urlencode }}">remove</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5">no payments</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="cx-table-panel">
+      <h3>scheduled payments</h3>
+      <table class="cx-table">
+        <thead><tr><th>run at</th><th>amount</th><th>status</th><th>invoice</th><th>actions</th></tr></thead>
+        <tbody>
+          {% for scheduled in scheduled_payments %}
+          <tr>
+            <td>{{ scheduled.run_at }}</td>
+            <td>{{ scheduled.amount }} {{ scheduled.currency|upper }}</td>
+            <td>{{ scheduled.get_status_display }}</td>
+            <td>{{ scheduled.invoice.number|default:'-' }}</td>
+            <td>
+              {% if scheduled.status != 'succeeded' and scheduled.status != 'canceled' %}
+              <form method="post" action="{% url 'plugins:netbox_billing:cx_run_scheduled_payment' pk=object.pk scheduled_payment_pk=scheduled.pk %}" class="inline-form">{% csrf_token %}<button type="submit">run now</button></form>
+              <form method="post" action="{% url 'plugins:netbox_billing:cx_cancel_scheduled_payment' pk=object.pk scheduled_payment_pk=scheduled.pk %}" class="inline-form">{% csrf_token %}<button type="submit">cancel</button></form>
+              <a href="{% url 'plugins:netbox_billing:cx_edit' model='scheduledpayment' pk=scheduled.pk %}?next={{ request.get_full_path|urlencode }}">edit</a>
+              <span class="sep">|</span>
+              <a href="{% url 'plugins:netbox_billing:cx_delete' model='scheduledpayment' pk=scheduled.pk %}?next={{ request.get_full_path|urlencode }}">remove</a>
+              {% else %}
+              <a href="{% url 'plugins:netbox_billing:cx_edit' model='scheduledpayment' pk=scheduled.pk %}?next={{ request.get_full_path|urlencode }}">view</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5">no scheduled payments</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% endif %}
+
+    {% if active_tab == 'documents' %}
+    <section class="cx-table-panel">
+      <h3>documents</h3>
+      <table class="cx-table">
+        <thead><tr><th>title</th><th>type</th><th>url</th><th>actions</th></tr></thead>
+        <tbody>
+          {% for doc in documents %}
+          <tr>
+            <td>{{ doc.title }}</td>
+            <td>{{ doc.document_type|default:'-' }}</td>
+            <td>{% if doc.document_url %}<a href="{{ doc.document_url }}" target="_blank">open</a>{% else %}-{% endif %}</td>
+            <td>
+              <a href="{% url 'plugins:netbox_billing:cx_edit' model='customerdocument' pk=doc.pk %}?next={{ request.get_full_path|urlencode }}">edit</a>
+              <span class="sep">|</span>
+              <a href="{% url 'plugins:netbox_billing:cx_delete' model='customerdocument' pk=doc.pk %}?next={{ request.get_full_path|urlencode }}">remove</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4">no documents</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% endif %}
+
+    {% if active_tab == 'communication' %}
+    <section class="cx-grid two-col">
+      <article class="cx-table-panel">
+        <h3>messages</h3>
+        <table class="cx-table">
+          <thead><tr><th>channel</th><th>subject</th><th>direction</th><th>time</th><th>actions</th></tr></thead>
+          <tbody>
+            {% for msg in communications %}
+            <tr>
+              <td>{{ msg.channel|default:'-' }}</td>
+              <td>{{ msg.subject|default:'-' }}</td>
+              <td>{{ msg.direction|default:'-' }}</td>
+              <td>{{ msg.occurred_at|default:'-' }}</td>
+              <td>
+                <a href="{% url 'plugins:netbox_billing:cx_edit' model='customercommunication' pk=msg.pk %}?next={{ request.get_full_path|urlencode }}">edit</a>
+                <span class="sep">|</span>
+                <a href="{% url 'plugins:netbox_billing:cx_delete' model='customercommunication' pk=msg.pk %}?next={{ request.get_full_path|urlencode }}">remove</a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">no messages</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </article>
+      <article class="cx-table-panel">
+        <h3>to-dos</h3>
+        <table class="cx-table">
+          <thead><tr><th>title</th><th>due</th><th>done</th><th>actions</th></tr></thead>
+          <tbody>
+            {% for todo in notes %}
+            <tr>
+              <td>{{ todo.title }}</td>
+              <td>{{ todo.due_date|default:'-' }}</td>
+              <td>{{ todo.completed|yesno:'yes,no' }}</td>
+              <td>
+                <a href="{% url 'plugins:netbox_billing:cx_edit' model='customernote' pk=todo.pk %}?next={{ request.get_full_path|urlencode }}">edit</a>
+                <span class="sep">|</span>
+                <a href="{% url 'plugins:netbox_billing:cx_delete' model='customernote' pk=todo.pk %}?next={{ request.get_full_path|urlencode }}">remove</a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4">no to-dos</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </article>
+    </section>
+    {% endif %}
+  </main>
+</body>
+</html>

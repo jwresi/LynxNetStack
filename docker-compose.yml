@@ -1,0 +1,163 @@
+version: "3.9"
+
+# LynxNetStack — Full stack Docker Compose
+# Runs all ResiBridge platform services together.
+#
+# Usage:
+#   docker compose up -d               # start all
+#   docker compose up -d jake2         # start one service
+#   docker compose logs -f jake2       # follow logs
+#
+# Prerequisites:
+#   - Copy jake2/config/.env.example -> jake2/config/.env and fill in values
+#   - Copy billing/netbox-stripe-sync/.env.example -> billing/netbox-stripe-sync/.env
+#   - Place routeros.npk at provisioner/routeros/routeros.npk
+
+services:
+
+  # ── Jake2: network intelligence engine ──────────────────────────────────────
+  jake2:
+    build:
+      context: ./jake2
+      dockerfile: Dockerfile
+    container_name: jake2
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./jake2/config/.env:/app/config/.env:ro
+      - ./jake2/config/certs:/app/config/certs:ro
+      - jake2_data:/app/data
+    environment:
+      - JAKE2_ENV=production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - lynxnet
+
+  # ── Provisioner: switch provisioning UI ─────────────────────────────────────
+  provisioner-backend:
+    build:
+      context: ./provisioner/backend
+      dockerfile: Dockerfile
+    container_name: provisioner-backend
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./provisioner/configs:/app/configs
+      - ./provisioner/routeros:/app/routeros:ro
+    env_file:
+      - ./provisioner/.env
+    cap_add:
+      - NET_ADMIN
+    networks:
+      - lynxnet
+
+  provisioner-frontend:
+    build:
+      context: ./provisioner/frontend
+      dockerfile: Dockerfile
+    container_name: provisioner-frontend
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5001
+    depends_on:
+      - provisioner-backend
+    networks:
+      - lynxnet
+
+  # ── Tikfig: config generator ─────────────────────────────────────────────────
+  tikfig:
+    build:
+      context: ./tikfig
+      dockerfile: Dockerfile
+    container_name: tikfig
+    restart: unless-stopped
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./tikfig/config.yml:/app/config.yml:ro
+      - ./tikfig/templates:/app/templates:ro
+    networks:
+      - lynxnet
+
+  # ── LynxMSP: operator CRM ────────────────────────────────────────────────────
+  lynxmsp-backend:
+    build:
+      context: ./lynxmsp/backend
+      dockerfile: Dockerfile
+    container_name: lynxmsp-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - lynxmsp_data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:///data/lynxcrm.db
+      - SECRET_KEY=${LYNXMSP_SECRET_KEY:-change-me-in-production}
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:3002
+      - NETBOX_URL=http://172.27.48.233:8001
+      - NETBOX_TOKEN=${NETBOX_API_TOKEN}
+    networks:
+      - lynxnet
+
+  lynxmsp-frontend:
+    build:
+      context: ./lynxmsp/frontend
+      dockerfile: Dockerfile
+    container_name: lynxmsp-frontend
+    restart: unless-stopped
+    ports:
+      - "3002:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+    depends_on:
+      - lynxmsp-backend
+    networks:
+      - lynxnet
+
+  # ── Billing: netbox-stripe-sync sidecar ──────────────────────────────────────
+  netbox-stripe-sync:
+    build:
+      context: ./billing/netbox-stripe-sync
+      dockerfile: Dockerfile
+    container_name: netbox-stripe-sync
+    restart: unless-stopped
+    ports:
+      - "8083:8080"
+    env_file:
+      - ./billing/netbox-stripe-sync/.env
+    volumes:
+      - stripe_sync_data:/data
+    networks:
+      - lynxnet
+
+  # ── Kea Sync: lease poller ────────────────────────────────────────────────────
+  kea-sync:
+    build:
+      context: ./kea-sync
+      dockerfile: Dockerfile
+    container_name: kea-sync
+    restart: unless-stopped
+    environment:
+      - KEA_API_URL=http://172.27.28.50:8000
+      - NETBOX_URL=http://172.27.48.233:8001
+      - NETBOX_TOKEN=${NETBOX_API_TOKEN}
+      - POLL_INTERVAL_SECONDS=60
+    networks:
+      - lynxnet
+
+volumes:
+  jake2_data:
+  lynxmsp_data:
+  stripe_sync_data:
+
+networks:
+  lynxnet:
+    driver: bridge

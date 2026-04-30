@@ -1,0 +1,14 @@
+[
+  {
+    "raw": "what is the fault domain for 000007.001",
+    "expected_intent": "get_building_fault_domain",
+    "expected_site": "000007",
+    "notes": "Direct building fault-domain phrasing should map to the building fault-domain action."
+  },
+  {
+    "raw": "is this a building-path issue at 000007.001",
+    "expected_intent": "get_building_fault_domain",
+    "expected_site": "000007",
+    "notes": "Building-path issue phrasing should resolve to the same building-scoped fault-domain action."
+  }
+]

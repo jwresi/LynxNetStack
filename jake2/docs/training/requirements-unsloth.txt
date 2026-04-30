@@ -1,0 +1,8 @@
+unsloth
+unsloth_zoo
+trl
+datasets
+transformers
+accelerate
+peft
+PyYAML

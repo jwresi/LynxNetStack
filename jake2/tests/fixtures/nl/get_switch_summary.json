@@ -1,0 +1,14 @@
+[
+  {
+    "raw": "what can you tell me about 000007.001.SW01",
+    "expected_intent": "get_switch_summary",
+    "expected_site": "000007",
+    "notes": "Switch-specific summary should beat the generic site-summary heuristic."
+  },
+  {
+    "raw": "show me this switch 000007.001.SW01",
+    "expected_intent": "get_switch_summary",
+    "expected_site": "000007",
+    "notes": "Direct switch summary phrasing."
+  }
+]

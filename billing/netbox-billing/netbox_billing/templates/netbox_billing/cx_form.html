@@ -1,0 +1,41 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ mode|title }} {{ object_name }} :: resi.billing</title>
+  <link rel="stylesheet" href="{% static 'netbox.css' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'netbox_billing/cx.css' %}">
+</head>
+<body class="cx-form-page" data-bs-theme="light">
+  <main class="cx-app">
+    <header class="cx-topbar">
+      <h1 class="brand">{{ mode|title }} {{ object_name }}</h1>
+      <a href="{% url 'plugins:netbox_billing:cx_dashboard' %}" class="link-engineer">cx home</a>
+    </header>
+
+    <section class="cx-panel">
+      <form method="post" enctype="multipart/form-data" class="cx-django-form">
+        {% csrf_token %}
+        {% if next_url %}
+        <input type="hidden" name="next" value="{{ next_url }}">
+        {% endif %}
+        {{ form.as_p }}
+        <div class="cx-actions">
+          <button type="submit">save</button>
+          {% if next_url %}
+          <a href="{{ next_url }}">cancel</a>
+          {% else %}
+          <a href="{% url 'plugins:netbox_billing:cx_dashboard' %}">cancel</a>
+          {% endif %}
+        </div>
+      </form>
+    </section>
+  </main>
+  <script src="{% static 'netbox.js' %}"></script>
+</body>
+</html>

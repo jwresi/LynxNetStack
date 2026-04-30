@@ -1,0 +1,14 @@
+[
+  {
+    "raw": "what can Jake manage right now",
+    "expected_intent": "get_cpe_management_readiness",
+    "expected_site": null,
+    "notes": "Broad readiness query from operator language."
+  },
+  {
+    "raw": "give me the cpe management readiness audit",
+    "expected_intent": "get_cpe_management_readiness",
+    "expected_site": null,
+    "notes": "Direct old scripts-copy readiness phrasing."
+  }
+]

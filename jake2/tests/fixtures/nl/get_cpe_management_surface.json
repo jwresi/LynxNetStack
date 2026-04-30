@@ -1,0 +1,14 @@
+[
+  {
+    "raw": "what local management do we have for NYCHA728EastNewYorkAve7F",
+    "expected_intent": "get_cpe_management_surface",
+    "expected_site": "000007",
+    "notes": "Old scripts-copy phrasing for local management surface on a subscriber label."
+  },
+  {
+    "raw": "what management do we have for DC:62:79:9D:C1:AD",
+    "expected_intent": "get_cpe_management_surface",
+    "expected_site": null,
+    "notes": "MAC-targeted management surface query."
+  }
+]

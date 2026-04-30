@@ -1,0 +1,67 @@
+.DS_Store
+*.pyc
+__pycache__/
+*.egg-info/
+.venv/
+venv/
+node_modules/
+dist/
+build/
+.next/
+
+# Secrets — never commit
+*.env
+!*.env.example
+!*.env.example.*
+config/.env
+config/*.json
+!config/*.example.json
+!config/*.example.yml
+!config/*.example.yaml
+ssh_mcp/config/ssh_mcp.json
+billing/netbox-stripe-sync/.env
+billing/netbox-billing/.env
+
+# Databases and runtime state
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+jake2/jake.db
+jake2/network_map.db
+ssh_mcp/data/
+kea-sync/data/
+
+# Certs — never commit
+config/certs/
+*.crt
+*.key
+*.pem
+
+# RouterOS packages — large binaries
+provisioner/routeros/
+*.npk
+
+# Build outputs
+jake2/jake2.egg-info/
+provisioner/frontend/build/
+lynxmsp/frontend/build/
+
+# Logs and outputs
+*.log
+jake2/logs/
+jake2/output/
+jake2/artifacts/
+jake2/audits/
+provisioner/configs/*.rsc
+!provisioner/configs/templates/
+
+# Test snapshots (keep baselines but not generated)
+jake2/tests/baselines/
+!jake2/tests/fixtures/
+
+# IDE
+.idea/
+.vscode/
+*.swp

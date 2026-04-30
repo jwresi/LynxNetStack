@@ -1,0 +1,20 @@
+[
+  {
+    "raw": "audit nycha ports",
+    "expected_intent": "get_nycha_port_audit",
+    "expected_site": "000007",
+    "notes": "Direct NYCHA port audit phrasing."
+  },
+  {
+    "raw": "which nycha switches have wrong patching",
+    "expected_intent": "get_nycha_port_audit",
+    "expected_site": "000007",
+    "notes": "Phrasing asking about wrong patching at NYCHA."
+  },
+  {
+    "raw": "nycha port audit",
+    "expected_intent": "get_nycha_port_audit",
+    "expected_site": "000007",
+    "notes": "Compressed phrasing — noun phrase without a verb."
+  }
+]

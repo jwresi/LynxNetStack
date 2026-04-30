@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jake2"
+version = "0.1.0"
+description = "Clean rebuild of Jake with deterministic core, audit subsystem, and explicit runtime integrations."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "librouteros",
+  "openpyxl>=3.1",
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8.0",
+]
+
+[project.scripts]
+jake-query = "core.jake_query:main"
+jake-audit-summary = "audits.batch_nycha_audit_summary:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["agents", "agents.*", "api", "api.*", "audits", "audits.*", "core", "core.*", "diagnosis", "diagnosis.*", "mcp", "mcp.*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

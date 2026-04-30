@@ -1,0 +1,17 @@
+[Unit]
+Description=NetBox Stripe Sync Sidecar
+After=network.target
+
+[Service]
+Type=simple
+User=resibridge
+WorkingDirectory=/opt/lynxnetstack/billing/netbox-stripe-sync
+EnvironmentFile=/opt/lynxnetstack/billing/netbox-stripe-sync/.env
+ExecStart=/opt/lynxnetstack/billing/netbox-stripe-sync/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8083
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
