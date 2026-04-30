@@ -446,7 +446,11 @@ def parse_operator_query(query: str) -> dict:
             return {"action": "rerun_latest_scan", "params": {"site_id": effective_site_id}}
         return {"action": "rerun_latest_scan", "params": {}}
 
-    if len(address_candidates) > 1 and not building_match and not switch_match:
+    # WHY: Only treat multiple address candidates as an ambiguous address query
+    # when no site alias was already resolved. If site_alias is set (e.g. "park79" -> 000003),
+    # the address matches are false positives from partial street-name fragments
+    # ("park" matching NYCHA "Park Place" addresses). The alias takes precedence.
+    if len(address_candidates) > 1 and not building_match and not switch_match and not site_alias:
         rendered = " or ".join(row.get("address") or "" for row in address_candidates[:2] if row.get("address"))
         return {'action': 'clarify_target', 'params': {'reason': f"Do you mean {rendered}?"}}
 

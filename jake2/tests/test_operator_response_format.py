@@ -286,7 +286,7 @@ def test_rerun_latest_scan_reports_unconfigured_trigger_backend() -> None:
         "rescan",
     )
     assert "cannot trigger a new network scan" in text
-    assert "no scan trigger backend is configured" in text
+    assert "no scan trigger backend configured" in text
 
 
 def test_rerun_latest_scan_reports_successful_refresh_when_scan_changes() -> None:

@@ -1,38 +1,38 @@
 [
-  {
-    "raw": "audit switch 000007.031.SW01",
-    "expected_intent": "generate_nycha_audit_workbook",
-    "expected_site": "000007",
-    "notes": "Switch-identity phrasing — 'audit switch <identity>' should route to audit workbook."
-  },
-  {
-    "raw": "generate audit workbook for 000007.031.SW01",
-    "expected_intent": "generate_nycha_audit_workbook",
-    "expected_site": "000007",
-    "notes": "Explicit 'generate audit workbook' phrasing with switch identity."
-  },
-  {
-    "raw": "audit all switches at nycha",
-    "expected_intent": "generate_nycha_audit_workbook",
-    "expected_site": "000007",
-    "notes": "Site-wide audit phrasing targeting NYCHA."
-  },
-  {
-    "raw": "nycha unit audit",
-    "expected_intent": "generate_nycha_audit_workbook",
-    "expected_site": "000007",
-    "notes": "Compressed noun-phrase phrasing for NYCHA unit audit."
-  },
-  {
-    "raw": "audit 225 Buffalo Ave",
-    "expected_intent": "generate_nycha_audit_workbook",
-    "expected_site": null,
-    "notes": "Address-only audit phrasing — no site alias resolves, address drives the workbook lookup."
-  },
-  {
-    "raw": "audit 184 Tapscott St",
-    "expected_intent": "generate_nycha_audit_workbook",
-    "expected_site": null,
-    "notes": "Address-only audit phrasing for a known NYCHA building address."
-  }
+    {
+        "raw": "audit switch 000007.031.SW01",
+        "expected_intent": "generate_nycha_audit_workbook",
+        "expected_site": "000007",
+        "notes": "Switch-identity phrasing \u2014 'audit switch <identity>' should route to audit workbook."
+    },
+    {
+        "raw": "generate audit workbook for 000007.031.SW01",
+        "expected_intent": "generate_nycha_audit_workbook",
+        "expected_site": "000007",
+        "notes": "Explicit 'generate audit workbook' phrasing with switch identity."
+    },
+    {
+        "raw": "audit all switches at nycha",
+        "expected_intent": "generate_nycha_audit_workbook",
+        "expected_site": "000007",
+        "notes": "Site-wide audit phrasing targeting NYCHA."
+    },
+    {
+        "raw": "nycha unit audit",
+        "expected_intent": "generate_nycha_audit_workbook",
+        "expected_site": "000007",
+        "notes": "Compressed noun-phrase phrasing for NYCHA unit audit."
+    },
+    {
+        "raw": "audit 225 Buffalo Ave",
+        "expected_intent": "generate_nycha_audit_workbook",
+        "expected_site": "000007",
+        "notes": "Address-only audit phrasing \u2014 no site alias resolves, address drives the workbook lookup. Site is now correctly resolved to 000007 via address candidates (225 Buffalo Ave is a NYCHA building)."
+    },
+    {
+        "raw": "audit 184 Tapscott St",
+        "expected_intent": "generate_nycha_audit_workbook",
+        "expected_site": "000007",
+        "notes": "Address-only audit phrasing for a known NYCHA building address. [auto-updated: site now resolves to 000007 via address/alias resolution]"
+    }
 ]

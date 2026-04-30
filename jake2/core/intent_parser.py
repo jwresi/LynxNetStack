@@ -751,7 +751,11 @@ class IntentParser:
             "better or worse",
         )
 
-        explicit_building_summary_like = building_id and (
+        # WHY: switch_identity takes priority — "what can you tell me about 000007.001.SW01"
+        # extracts building_id=000007.001 from the switch prefix, but the user is asking
+        # about the switch, not the building. Exclude switch queries from the
+        # building-summary path so they fall through to get_switch_summary below.
+        explicit_building_summary_like = building_id and not switch_identity and (
             raw_lower.strip() == building_id.lower()
             or any(token in raw_lower for token in summary_tokens)
             or any(token in raw_lower for token in building_health_tokens)
@@ -1260,7 +1264,11 @@ class IntentParser:
                 raw=raw,
             )
 
-        if building_id and any(token in raw_lower for token in building_health_tokens):
+        # WHY: switch_identity takes priority over building_id here.
+        # "what can you tell me about 000007.001.SW01" extracts both a switch_identity
+        # AND a building_id (000007.001 prefix). The switch path fires later at line ~1384;
+        # we must not short-circuit to get_building_health when the user named a switch.
+        if building_id and not switch_identity and any(token in raw_lower for token in building_health_tokens):
             return IntentSchema(
                 intent="get_building_health",
                 entities=IntentEntities(site_id=site_id, building=building_id, scope="building"),
@@ -1285,7 +1293,11 @@ class IntentParser:
                 raw=raw,
             )
 
-        if len(address_candidates) > 1 and explicit_target.kind == "none":
+        # WHY: Only treat multiple address candidates as ambiguous if no site alias was
+        # already resolved. If alias_site_id is set (e.g. "park79" -> 000003), the
+        # address matches are false positives from street-name fragments ("park" matching
+        # NYCHA "Park Place" addresses). The alias takes precedence.
+        if len(address_candidates) > 1 and explicit_target.kind == "none" and alias_site_id is None:
             rendered = " or ".join(row.get("address") or "" for row in address_candidates[:2] if row.get("address"))
             return IntentSchema(
                 intent="unknown",
