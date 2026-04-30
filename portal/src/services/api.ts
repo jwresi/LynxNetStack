@@ -46,8 +46,25 @@ const crmReq = async (url: string, opts?: RequestInit) => {
 const nbReq = (path: string) => req(`/api/netbox${path}`)
 
 // ── Jake2 ─────────────────────────────────────────────────────────────────────
+// History format Jake2 expects: [{role: 'user'|'assistant', content: string}]
+export type JakeHistoryEntry = { role: 'user' | 'assistant'; content: string }
+
 export const jake = {
-  query:  (q: string) => req('/api/jake/chat', { method: 'POST', body: JSON.stringify({ message: q }) }),
+  // Single-shot query — no history. Use for dashboard quick queries only.
+  query: (message: string) =>
+    req('/api/jake/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    }),
+
+  // Conversational query — sends full history so Jake2 can resolve follow-ups.
+  // history should contain all prior turns BEFORE the current message.
+  chat: (message: string, history: JakeHistoryEntry[]) =>
+    req('/api/jake/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message, history }),
+    }),
+
   stats:  () => req('/api/jake/stats'),
   brief:  () => req('/api/jake/brief'),
   health: () => req('/api/jake/stats'),
