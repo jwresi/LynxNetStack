@@ -56,6 +56,7 @@ SITE_ALIAS_MAP: dict[str, str] = {
     "festivalfield": "000021",
     # WHY: Sweetwater appears in natural-language operator queries.
     "sweetwater": "000022",
+    "atlantis": "000023",
 }
 
 
@@ -271,6 +272,28 @@ SITE_SERVICE_PROFILES: dict[str, dict[str, Any]] = {
         "switch_uplink_ports": ["ether49", "ether25", "sfp-sfpplus1"],
         "summary": "Sweetwater site. Do not assume PPP-only evidence; prefer DHCP and ARP alongside PPP when classifying customer state.",
         "primary_sources": ["live_dhcp_leases", "router_arp", "router_ppp_active", "netbox_site_inventory"],
+        "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
+    },
+    "000023": {
+        "name": "Atlantis",
+        "aliases": ["atlantis"],
+        "service_mode": "dhcp_tauc_tp_link_olt",
+        "uses_olt": True,
+        # WHY: Three TP-Link OLTs on 100.64.34.0/24. Router at 172.27.225.218.
+        # Confirmed from NetBox site 000023, active, fiber deployment.
+        "mgmt_subnet": "100.64.34.0/24",
+        "switch_uplink_ports": ["ether25", "sfp-sfpplus1"],
+        "olts": [
+            {"olt_name": "000023.001.OLT01", "olt_ip": "100.64.34.224"},
+            {"olt_name": "000023.001.OLT02", "olt_ip": "100.64.34.223"},
+            {"olt_name": "000023.001.OLT03", "olt_ip": "100.64.34.222"},
+        ],
+        "summary": (
+            "Atlantis site (000023). Active fiber/OLT deployment. Three TP-Link OLTs on "
+            "100.64.34.0/24. Router at 172.27.225.218. Prefer OLT ONU state, TAUC/runtime, "
+            "and live DHCP leases over PPP-only assumptions."
+        ),
+        "primary_sources": ["live_dhcp_leases", "tauc_runtime", "live_olt_onu_state", "router_arp", "netbox_site_inventory"],
         "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
     },
 }

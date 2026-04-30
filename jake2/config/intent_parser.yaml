@@ -47,6 +47,8 @@ site_vocabulary:
     - festivalfield
   "000022":
     - sweetwater
+  "000023":
+    - atlantis
 
 equipment_vocabulary:
   Vilo: Vilo CPE mesh units
