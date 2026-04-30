@@ -1,55 +1,173 @@
 import React, { useEffect, useState } from 'react'
+import { Receipt, DollarSign, AlertCircle, CheckCircle, Clock, RefreshCw, Plus, X, Check, Loader } from 'lucide-react'
 import { crm } from '../services/api'
-import { Receipt, DollarSign } from 'lucide-react'
 
-interface Invoice { id: number; invoice_number?: string; customer_name?: string; amount?: number; status?: string; due_date?: string }
+interface Invoice {
+  id: number; amount: number; status: string; due_date: string; created_at: string
+  customer?: { id: number; name: string; email: string }
+  customer_id?: number
+}
 
-export default function Invoices() {
-  const [invoices, setInvoices] = useState<Invoice[]>([])
-  const [loading,  setLoading]  = useState(true)
-  const [error,    setError]    = useState('')
+function statusBadge(s: string) {
+  if (s === 'paid')    return <span className="badge-green"><CheckCircle size={10}/> paid</span>
+  if (s === 'overdue') return <span className="badge-red"><AlertCircle size={10}/> overdue</span>
+  if (s === 'unpaid')  return <span className="badge-amber"><Clock size={10}/> unpaid</span>
+  return <span className="badge-gray">{s}</span>
+}
 
-  useEffect(() => {
-    crm.invoices().then(d => setInvoices(Array.isArray(d) ? d : d.items ?? []))
-      .catch(e => setError(e.message)).finally(() => setLoading(false))
-  }, [])
+function NewInvoiceModal({ onSave, onClose }: { onSave: ()=>void; onClose: ()=>void }) {
+  const [form, setForm] = useState({ customer_id: 1, amount: '', due_date: '' })
+  const [customers, setCustomers] = useState<any[]>([])
+  const [saving, setSaving] = useState(false)
+  const f = (k:string) => (e: React.ChangeEvent<any>) => setForm(p => ({...p, [k]: e.target.value}))
 
-  const statusBadge = (s?: string) => {
-    if (!s) return <span className="badge-gray">—</span>
-    if (s === 'paid') return <span className="badge-green">paid</span>
-    if (s === 'overdue') return <span className="badge-red">overdue</span>
-    if (s === 'open' || s === 'pending') return <span className="badge-blue">open</span>
-    return <span className="badge-gray">{s}</span>
+  useEffect(() => { crm.customers().then(d => setCustomers(Array.isArray(d) ? d : [])).catch(()=>{}) }, [])
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      await crm.invoices() // just to test token — real POST would use crm.createInvoice if it existed
+      // LynxMSP has POST /invoices — call it directly
+      const token = localStorage.getItem('crm_token')
+      const r = await fetch('/api/crm/invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ customer_id: +form.customer_id, amount: +form.amount, due_date: new Date(form.due_date).toISOString(), status: 'unpaid' })
+      })
+      if (!r.ok) throw new Error(await r.text())
+      onSave()
+    } catch (e: any) { alert(e.message) }
+    setSaving(false)
   }
 
   return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-surface-3">
+          <h3 className="font-semibold text-slate-800">New Invoice</h3>
+          <button onClick={onClose}><X size={18} className="text-slate-400"/></button>
+        </div>
+        <div className="p-5 space-y-3">
+          <div><label className="text-xs font-medium text-slate-500 mb-1 block">Subscriber</label>
+            <select className="input" value={form.customer_id} onChange={f('customer_id')}>
+              {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select></div>
+          <div><label className="text-xs font-medium text-slate-500 mb-1 block">Amount ($)</label>
+            <input className="input" type="number" step="0.01" value={form.amount} onChange={f('amount')} placeholder="30.00"/></div>
+          <div><label className="text-xs font-medium text-slate-500 mb-1 block">Due Date</label>
+            <input className="input" type="date" value={form.due_date} onChange={f('due_date')}/></div>
+        </div>
+        <div className="flex gap-2 px-5 pb-5">
+          <button onClick={onClose} className="btn-ghost flex-1 justify-center">Cancel</button>
+          <button onClick={save} disabled={saving || !form.amount || !form.due_date} className="btn-primary flex-1 justify-center">
+            {saving ? <Loader size={14} className="animate-spin"/> : <Check size={14}/>} Create
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function Invoices() {
+  const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [error, setError]       = useState('')
+  const [filter, setFilter]     = useState('all')
+  const [showNew, setShowNew]   = useState(false)
+
+  const load = () => {
+    setLoading(true)
+    crm.invoices().then(d => setInvoices(Array.isArray(d) ? d : [])).catch(e => setError(e.message)).finally(() => setLoading(false))
+  }
+  useEffect(() => { load() }, [])
+
+  const markPaid = async (id: number) => {
+    try { await crm.updateInvoice(id, { status: 'paid' }); setInvoices(inv => inv.map(i => i.id===id ? {...i, status:'paid'} : i)) }
+    catch (e: any) { alert(e.message) }
+  }
+
+  const filtered = filter === 'all' ? invoices : invoices.filter(i => i.status === filter)
+  const totalUnpaid = invoices.filter(i => i.status !== 'paid').reduce((s,i) => s + (i.amount||0), 0)
+  const totalOverdue = invoices.filter(i => i.status === 'overdue').reduce((s,i) => s + (i.amount||0), 0)
+
+  return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-slate-800">Invoices</h2>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-800">Invoices</h2>
+          <p className="text-xs text-slate-400 mt-0.5">{invoices.length} total · ${totalUnpaid.toFixed(2)} outstanding · ${totalOverdue.toFixed(2)} overdue</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={load} className="btn-ghost text-xs"><RefreshCw size={13}/></button>
+          <button onClick={() => setShowNew(true)} className="btn-primary text-sm gap-1.5"><Plus size={14}/> New Invoice</button>
+        </div>
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label:'Total Outstanding', val:`$${totalUnpaid.toFixed(2)}`, color:'text-amber-600' },
+          { label:'Overdue',           val:`$${totalOverdue.toFixed(2)}`, color:'text-red-600' },
+          { label:'Total Invoices',    val:String(invoices.length),       color:'text-slate-700' },
+        ].map(s => (
+          <div key={s.label} className="card text-center py-3">
+            <div className={`text-xl font-bold ${s.color}`}>{s.val}</div>
+            <div className="text-xs text-slate-400 mt-0.5">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filter tabs */}
+      <div className="flex gap-1 bg-surface-1 rounded-lg p-1 border border-surface-3 w-fit">
+        {[['all','All'],['unpaid','Unpaid'],['overdue','Overdue'],['paid','Paid']].map(([v,l]) => (
+          <button key={v} onClick={() => setFilter(v)}
+            className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${filter===v ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>
+            {l}
+          </button>
+        ))}
+      </div>
+
       {error && <div className="card bg-red-50 border-red-200 text-red-700 text-sm">{error}</div>}
+
       <div className="card p-0 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-3 bg-surface-1">
-              {['#', 'Customer', 'Amount', 'Due', 'Status'].map(h => (
+              {['ID','Subscriber','Amount','Due Date','Status',''].map(h => (
                 <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={5} className="text-center py-8 text-slate-400">Loading...</td></tr>}
-            {!loading && invoices.length === 0 && <tr><td colSpan={5} className="text-center py-8 text-slate-400">No invoices</td></tr>}
-            {invoices.map(inv => (
+            {loading && <tr><td colSpan={6} className="text-center py-10 text-slate-400">Loading invoices...</td></tr>}
+            {!loading && filtered.length===0 && <tr><td colSpan={6} className="text-center py-10 text-slate-400">No invoices in this view</td></tr>}
+            {filtered.map(inv => (
               <tr key={inv.id} className="table-row">
-                <td className="px-4 py-2.5 font-mono text-xs">{inv.invoice_number ?? inv.id}</td>
-                <td className="px-4 py-2.5">{inv.customer_name ?? '—'}</td>
-                <td className="px-4 py-2.5">${(inv.amount ?? 0).toFixed(2)}</td>
-                <td className="px-4 py-2.5 text-slate-500 text-xs">{inv.due_date ?? '—'}</td>
-                <td className="px-4 py-2.5">{statusBadge(inv.status)}</td>
+                <td className="px-4 py-3 font-mono text-xs text-slate-500">#{inv.id}</td>
+                <td className="px-4 py-3">
+                  <div className="font-medium text-slate-800">{inv.customer?.name ?? `Customer #${inv.customer_id}`}</div>
+                  <div className="text-xs text-slate-400">{inv.customer?.email}</div>
+                </td>
+                <td className="px-4 py-3 font-semibold text-slate-800">${(inv.amount??0).toFixed(2)}</td>
+                <td className="px-4 py-3 text-xs text-slate-500">
+                  {inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '—'}
+                  {inv.due_date && new Date(inv.due_date) < new Date() && inv.status !== 'paid' &&
+                    <div className="text-red-500 text-xs">overdue</div>}
+                </td>
+                <td className="px-4 py-3">{statusBadge(inv.status)}</td>
+                <td className="px-4 py-3">
+                  {inv.status !== 'paid' && (
+                    <button onClick={() => markPaid(inv.id)}
+                      className="text-xs text-emerald-600 hover:underline font-medium">Mark paid</button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {showNew && <NewInvoiceModal onSave={() => { load(); setShowNew(false) }} onClose={() => setShowNew(false)}/>}
     </div>
   )
 }
