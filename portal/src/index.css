@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body { @apply bg-surface-1 text-slate-800 font-sans antialiased; }
+  ::-webkit-scrollbar { @apply w-1.5; }
+  ::-webkit-scrollbar-track { @apply bg-transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-slate-300 rounded-full; }
+}
+
+@layer components {
+  .card { @apply bg-white rounded-xl shadow-sm border border-surface-3 p-5; }
+  .stat-value { @apply text-3xl font-bold text-slate-800; }
+  .stat-label { @apply text-xs font-medium text-slate-500 uppercase tracking-wide mt-0.5; }
+  .badge-green  { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200; }
+  .badge-red    { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200; }
+  .badge-amber  { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200; }
+  .badge-blue   { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200; }
+  .badge-gray   { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200; }
+  .btn-primary  { @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 transition-colors; }
+  .btn-ghost    { @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-600 text-sm hover:bg-surface-2 transition-colors; }
+  .input        { @apply w-full px-3 py-2 rounded-lg border border-surface-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 bg-white; }
+  .table-row    { @apply border-b border-surface-3 hover:bg-surface-1 transition-colors; }
+  .sidebar-link { @apply flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors; }
+  .sidebar-link-active  { @apply bg-brand-50 text-brand-700; }
+  .sidebar-link-default { @apply text-slate-600 hover:bg-surface-2 hover:text-slate-800; }
+}
