@@ -27,7 +27,7 @@ const req = async (url: string, opts?: RequestInit) => {
   return r.json()
 }
 
-// CRM requests inject Bearer token when available
+// CRM requests inject Bearer token automatically
 const crmReq = async (url: string, opts?: RequestInit) => {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -37,6 +37,8 @@ const crmReq = async (url: string, opts?: RequestInit) => {
   const r = await fetch(url, { headers, ...opts })
   if (r.status === 401) { setCrmToken(null); throw new Error('401 Unauthorized — please log in') }
   if (!r.ok) throw new Error(`${r.status} ${r.statusText}`)
+  // DELETE returns empty body
+  if (r.status === 204 || r.headers.get('content-length') === '0') return null
   return r.json()
 }
 
@@ -53,40 +55,55 @@ export const jake = {
 
 // ── LynxMSP CRM ───────────────────────────────────────────────────────────────
 export const crm = {
-  login:        (username: string, password: string) => {
+  login:         (username: string, password: string) => {
     const body = new URLSearchParams({ username, password })
     return fetch('/api/crm/auth/login', { method: 'POST', body }).then(r => r.json())
   },
-  health:       () => req('/api/crm/auth/health'),
-  stats:        () => crmReq('/api/crm/dashboard/stats'),
-  customers:    (skip = 0, limit = 100) => crmReq(`/api/crm/customers/?skip=${skip}&limit=${limit}`),
-  customer:     (id: number)            => crmReq(`/api/crm/customers/${id}`),
-  invoices:     (skip = 0, limit = 100) => crmReq(`/api/crm/invoices/?skip=${skip}&limit=${limit}`),
-  invoice:      (id: number)            => crmReq(`/api/crm/invoices/${id}`),
-  updateInvoice:(id: number, body: any) => crmReq(`/api/crm/invoices/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-  servicePlans: ()                      => crmReq('/api/crm/service-plans'),
-  createPlan:   (body: any)             => crmReq('/api/crm/service-plans', { method: 'POST', body: JSON.stringify(body) }),
-  updatePlan:   (id: number, body: any) => crmReq(`/api/crm/service-plans/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-  deletePlan:   (id: number)            => crmReq(`/api/crm/service-plans/${id}`, { method: 'DELETE' }),
-  tickets:      (skip = 0, limit = 100) => crmReq(`/api/crm/tickets/?skip=${skip}&limit=${limit}`),
-  ticket:       (id: number)            => crmReq(`/api/crm/tickets/${id}`),
-  createTicket: (body: any)             => crmReq('/api/crm/tickets', { method: 'POST', body: JSON.stringify(body) }),
-  updateTicket: (id: number, body: any) => crmReq(`/api/crm/tickets/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-  addComment:   (id: number, body: any) => crmReq(`/api/crm/tickets/${id}/comments`, { method: 'POST', body: JSON.stringify(body) }),
-  settings:     ()                      => crmReq('/api/crm/settings'),
+  health:        () => req('/api/crm/auth/health'),
+  stats:         () => crmReq('/api/crm/dashboard/stats'),
+
+  // Customers
+  customers:     (skip = 0, limit = 100) => crmReq(`/api/crm/customers?skip=${skip}&limit=${limit}`),
+  customer:      (id: number)            => crmReq(`/api/crm/customers/${id}`),
+  createCustomer:(body: any)             => crmReq('/api/crm/customers', { method: 'POST', body: JSON.stringify(body) }),
+  updateCustomer:(id: number, body: any) => crmReq(`/api/crm/customers/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+
+  // Invoices
+  invoices:      (skip = 0, limit = 100) => crmReq(`/api/crm/invoices?skip=${skip}&limit=${limit}`),
+  invoice:       (id: number)            => crmReq(`/api/crm/invoices/${id}`),
+  createInvoice: (body: any)             => crmReq('/api/crm/invoices', { method: 'POST', body: JSON.stringify(body) }),
+  updateInvoice: (id: number, body: any) => crmReq(`/api/crm/invoices/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteInvoice: (id: number)            => crmReq(`/api/crm/invoices/${id}`, { method: 'DELETE' }),
+
+  // Service plans
+  servicePlans:  ()                      => crmReq('/api/crm/service-plans'),
+  createPlan:    (body: any)             => crmReq('/api/crm/service-plans', { method: 'POST', body: JSON.stringify(body) }),
+  updatePlan:    (id: number, body: any) => crmReq(`/api/crm/service-plans/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deletePlan:    (id: number)            => crmReq(`/api/crm/service-plans/${id}`, { method: 'DELETE' }),
+
+  // Tickets
+  tickets:       (skip = 0, limit = 100) => crmReq(`/api/crm/tickets?skip=${skip}&limit=${limit}`),
+  ticket:        (id: number)            => crmReq(`/api/crm/tickets/${id}`),
+  createTicket:  (body: any)             => crmReq('/api/crm/tickets', { method: 'POST', body: JSON.stringify(body) }),
+  updateTicket:  (id: number, body: any) => crmReq(`/api/crm/tickets/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteTicket:  (id: number)            => crmReq(`/api/crm/tickets/${id}`, { method: 'DELETE' }),
+  addComment:    (id: number, body: any) => crmReq(`/api/crm/tickets/${id}/comments`, { method: 'POST', body: JSON.stringify(body) }),
+
+  // Settings
+  settings:      () => crmReq('/api/crm/settings'),
 }
 
 // ── NetBox direct (proxied, auth token injected by vite.config.ts) ────────────
 export const netbox = {
-  tenants:    (params = '')    => nbReq(`/api/tenancy/tenants/?limit=200${params}`),
-  circuits:   (params = '')    => nbReq(`/api/circuits/circuits/?limit=200${params}`),
-  circuit:    (id: number)     => nbReq(`/api/circuits/circuits/${id}/`),
-  sites:      ()               => nbReq('/api/dcim/sites/?limit=50'),
-  devices:    (site?: string)  => nbReq(`/api/dcim/devices/?limit=200${site ? `&site=${site}` : ''}`),
-  interfaces: (deviceId: number) => nbReq(`/api/dcim/interfaces/?device_id=${deviceId}&limit=100`),
-  ipAddresses:(tenant?: string)=> nbReq(`/api/ipam/ip-addresses/?limit=100${tenant ? `&tenant=${tenant}` : ''}`),
-  prefixes:   ()               => nbReq('/api/ipam/prefixes/?limit=50'),
-  status:     ()               => nbReq('/api/status/'),
+  tenants:     (params = '')     => nbReq(`/api/tenancy/tenants/?limit=200${params}`),
+  circuits:    (params = '')     => nbReq(`/api/circuits/circuits/?limit=200${params}`),
+  circuit:     (id: number)      => nbReq(`/api/circuits/circuits/${id}/`),
+  sites:       ()                => nbReq('/api/dcim/sites/?limit=50'),
+  devices:     (site?: string)   => nbReq(`/api/dcim/devices/?limit=200${site ? `&site=${site}` : ''}`),
+  interfaces:  (deviceId: number)=> nbReq(`/api/dcim/interfaces/?device_id=${deviceId}&limit=100`),
+  ipAddresses: (tenant?: string) => nbReq(`/api/ipam/ip-addresses/?limit=100${tenant ? `&tenant=${tenant}` : ''}`),
+  prefixes:    ()                => nbReq('/api/ipam/prefixes/?limit=50'),
+  status:      ()                => nbReq('/api/status/'),
 }
 
 // ── Provisioner ───────────────────────────────────────────────────────────────
