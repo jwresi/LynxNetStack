@@ -1,9 +1,50 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
+import pytest
 from mcp.jake_ops_mcp import JakeOps
 from mcp import jake_ops_mcp as opsmod
+
+
+@pytest.fixture(autouse=True)
+def _clear_lru_caches():
+    """WHY: lru_cache on load_nycha_info_rows/load_tauc_nycha_audit_rows leaks
+    between tests when the full suite runs.
+
+    Two failure modes:
+    1. A prior test calls JakeOps() with the production path, filling the cache
+       before these isolated tests run.
+    2. test_audit_fixture_validation sets opsmod.NYCHA_INFO_CSV to the (empty)
+       fixture path and does not restore it, so subsequent tests see an empty CSV
+       instead of None/production.
+
+    Fix: save and restore both the cache AND the module-level path attribute.
+    """
+    # WHY: _current_nycha_info_csv() reads os.environ["JAKE_NYCHA_INFO_CSV"] first,
+    # ignoring opsmod.NYCHA_INFO_CSV when the env var is set. Tests that only set
+    # opsmod.NYCHA_INFO_CSV see production data when the env var is present.
+    # Solution: temporarily remove the env var so the function reads opsmod.NYCHA_INFO_CSV.
+    saved_csv      = opsmod.NYCHA_INFO_CSV
+    saved_tauc     = opsmod.TAUC_NYCHA_AUDIT_CSV
+    saved_env_csv  = os.environ.pop("JAKE_NYCHA_INFO_CSV", None)
+    saved_env_tauc = os.environ.pop("JAKE_TAUC_AUDIT_CSV", None)
+    opsmod.load_nycha_info_rows.cache_clear()
+    opsmod.load_tauc_nycha_audit_rows.cache_clear()
+    yield
+    opsmod.NYCHA_INFO_CSV       = saved_csv
+    opsmod.TAUC_NYCHA_AUDIT_CSV = saved_tauc
+    if saved_env_csv is not None:
+        os.environ["JAKE_NYCHA_INFO_CSV"] = saved_env_csv
+    elif "JAKE_NYCHA_INFO_CSV" in os.environ:
+        del os.environ["JAKE_NYCHA_INFO_CSV"]
+    if saved_env_tauc is not None:
+        os.environ["JAKE_TAUC_AUDIT_CSV"] = saved_env_tauc
+    elif "JAKE_TAUC_AUDIT_CSV" in os.environ:
+        del os.environ["JAKE_TAUC_AUDIT_CSV"]
+    opsmod.load_nycha_info_rows.cache_clear()
+    opsmod.load_tauc_nycha_audit_rows.cache_clear()
 
 
 def _ops() -> JakeOps:

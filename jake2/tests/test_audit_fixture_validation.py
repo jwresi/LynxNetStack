@@ -29,10 +29,17 @@ def _configure_audit_fixture_env(monkeypatch) -> None:
     monkeypatch.setenv("JAKE_NYCHA_INFO_CSV", str(FIXTURE_DIR / "nycha_info_fixture.csv"))
     monkeypatch.setenv("JAKE_TAUC_AUDIT_CSV", str(FIXTURE_DIR / "tauc_nycha_audit_fixture.csv"))
     monkeypatch.setenv("JAKE_VILO_INVENTORY_SNAPSHOT", str(FIXTURE_DIR / "vilo_inventory_fixture.json"))
+    # WHY: Save and restore opsmod module attributes so that direct attribute
+    # assignments here do not leak into subsequent tests (monkeypatch only
+    # reverts os.environ changes, not module-level attribute changes).
+    _orig_csv  = opsmod.NYCHA_INFO_CSV
+    _orig_tauc = opsmod.TAUC_NYCHA_AUDIT_CSV
     opsmod.NYCHA_INFO_CSV = Path(str(FIXTURE_DIR / "nycha_info_fixture.csv"))
     opsmod.TAUC_NYCHA_AUDIT_CSV = Path(str(FIXTURE_DIR / "tauc_nycha_audit_fixture.csv"))
     opsmod.load_nycha_info_rows.cache_clear()
     opsmod.load_tauc_nycha_audit_rows.cache_clear()
+    monkeypatch.setattr(opsmod, "NYCHA_INFO_CSV",       Path(str(FIXTURE_DIR / "nycha_info_fixture.csv")))
+    monkeypatch.setattr(opsmod, "TAUC_NYCHA_AUDIT_CSV", Path(str(FIXTURE_DIR / "tauc_nycha_audit_fixture.csv")))
 
 
 def _load_baseline() -> dict[str, object]:

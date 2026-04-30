@@ -1,8 +1,42 @@
 from __future__ import annotations
 
+import os
+import pytest
+from mcp import jake_ops_mcp as opsmod
 from core.dispatch import IntentDispatcher
 from core.intent_parser import IntentParser, load_intent_parser_config, normalize_address, parse_explicit_target
 from core.query_core import parse_operator_query, run_structured_intent
+
+
+@pytest.fixture(autouse=True)
+def _isolate_nycha_csv_cache():
+    """WHY: test_street_only_address_prompts_clarification calls dispatcher.dispatch
+    which triggers load_nycha_info_rows() with the production CSV path as a side
+    effect. This poisons the lru_cache and causes subsequent test_collectors tests
+    to see production data instead of their fixture data.
+    Save/restore both the cache and the module attribute around every test."""
+    # WHY: _current_nycha_info_csv() reads os.environ["JAKE_NYCHA_INFO_CSV"] first.
+    # Temporarily pop it so any production CSV loaded inside this test does not
+    # leak into the cache for subsequent test modules.
+    saved_csv      = opsmod.NYCHA_INFO_CSV
+    saved_tauc     = opsmod.TAUC_NYCHA_AUDIT_CSV
+    saved_env_csv  = os.environ.pop("JAKE_NYCHA_INFO_CSV", None)
+    saved_env_tauc = os.environ.pop("JAKE_TAUC_AUDIT_CSV", None)
+    opsmod.load_nycha_info_rows.cache_clear()
+    opsmod.load_tauc_nycha_audit_rows.cache_clear()
+    yield
+    opsmod.NYCHA_INFO_CSV       = saved_csv
+    opsmod.TAUC_NYCHA_AUDIT_CSV = saved_tauc
+    if saved_env_csv is not None:
+        os.environ["JAKE_NYCHA_INFO_CSV"] = saved_env_csv
+    elif "JAKE_NYCHA_INFO_CSV" in os.environ:
+        del os.environ["JAKE_NYCHA_INFO_CSV"]
+    if saved_env_tauc is not None:
+        os.environ["JAKE_TAUC_AUDIT_CSV"] = saved_env_tauc
+    elif "JAKE_TAUC_AUDIT_CSV" in os.environ:
+        del os.environ["JAKE_TAUC_AUDIT_CSV"]
+    opsmod.load_nycha_info_rows.cache_clear()
+    opsmod.load_tauc_nycha_audit_rows.cache_clear()
 
 
 def _parser() -> IntentParser:
