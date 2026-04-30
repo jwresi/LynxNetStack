@@ -32,6 +32,8 @@ from core.shared import (
     SITE_SERVICE_PROFILES,
     SUBSCRIBER_NAME_TO_MAC,
     classify_port_role,
+    get_site_uplink_ports,
+    get_site_mgmt_subnet,
     project_env_candidates,
     normalize_subscriber_label,
     load_env_file as shared_load_env_file,
@@ -3592,7 +3594,19 @@ class JakeOps:
 
     def get_subnet_health(self, subnet: str | None, site_id: str | None, include_alerts: bool, include_bigmac: bool) -> dict[str, Any]:
         scan_id = self.latest_scan_id()
-        site_prefix = site_id or ("000007" if subnet == "192.168.44.0/24" else None)
+        # WHY: Resolve site_prefix from the site registry — never hardcode subnet-to-site.
+        # Each site's mgmt_subnet is declared in SITE_SERVICE_PROFILES via get_site_mgmt_subnet().
+        if site_id:
+            site_prefix = site_id
+        elif subnet:
+            from core.shared import SITE_SERVICE_PROFILES
+            site_prefix = next(
+                (sid for sid, profile in SITE_SERVICE_PROFILES.items()
+                 if profile.get("mgmt_subnet") == subnet),
+                None,
+            )
+        else:
+            site_prefix = None
 
         devices = self._device_rows_for_prefix(scan_id, site_prefix)
         outliers = self._outlier_rows_for_prefix(scan_id, site_prefix)
@@ -11706,52 +11720,88 @@ print(json.dumps(out))
             "observe_ports": observe,
         }
 
-    def get_nycha_port_audit(self) -> dict[str, Any]:
-        # WHY: NYCHA CRS-series switches use ether49 as the uplink port.
-        # Some switches are patched with ether48 as the uplink instead, which is wrong.
-        # This method detects those mispatches by examining bridge port configuration
-        # and MAC learning evidence from the latest Bigmac scan.
-        scan_id = self.latest_scan_id()
+    def get_nycha_port_audit(self, site_id: str | None = None) -> dict[str, Any]:
+        """Audit switch uplink port patching for any site.
 
-        # Collect all NYCHA switches with ether48 or ether49 configured as bridge ports.
+        WHY: CRS354-48G switches (NYCHA 000007) use ether49 as the uplink port.
+        CRS326-24G switches (other sites) use ether25. Some are mispatched.
+        This method is site-agnostic — it reads the correct uplink ports from
+        SITE_SERVICE_PROFILES via get_site_uplink_ports() and applies them to
+        whichever site is requested.
+
+        Defaults to site 000007 when called with no arguments (backward compatible
+        with NYCHA operator intent tokens in query_core.py).
+        """
+        effective_site_id = site_id or "000007"
+        site_prefix = effective_site_id + "%"
+        site_name = (SITE_SERVICE_PROFILES.get(effective_site_id) or {}).get("name", effective_site_id)
+
+        # WHY: Uplink ports are site-specific; consult the registry rather than hardcoding.
+        uplink_ports = get_site_uplink_ports(effective_site_id)
+        # The "wrong" port is the one just below the expected uplink on the same switch model.
+        # For 48-port (ether49 uplink) -> ether48 is the wrong port.
+        # For 24-port (ether25 uplink) -> ether24 is the wrong port.
+        # Build a map of expected -> wrong for each uplink candidate.
+        wrong_port_map: dict[str, str] = {}
+        for port in uplink_ports:
+            m = re.match(r"^(ether)(\d+)$", port)
+            if m:
+                num = int(m.group(2))
+                if num > 1:
+                    wrong_port_map[port] = f"ether{num - 1}"
+
+        if not wrong_port_map:
+            # No ether-style uplink ports configured for this site.
+            return {
+                "site_id": effective_site_id,
+                "site_name": site_name,
+                "total_issues": 0,
+                "wrong_uplink_port": [],
+                "mixed_patch_order": [],
+                "summary": f"No ether-port uplink audit configured for site {effective_site_id} ({site_name}).",
+            }
+
+        scan_id = self.latest_scan_id()
+        all_audit_ports = list(wrong_port_map.keys()) + list(wrong_port_map.values())
+        port_placeholders = ",".join("?" * len(all_audit_ports))
+
         port_rows = self.db.execute(
-            """
+            f"""
             select d.identity, bp.interface as port_interface
             from bridge_ports bp
             join devices d on d.scan_id=bp.scan_id and d.ip=bp.ip
             where bp.scan_id=?
-              and d.identity like '000007%'
-              and bp.interface in ('ether48', 'ether49')
+              and d.identity like ?
+              and bp.interface in ({port_placeholders})
             """,
-            (scan_id,),
+            (scan_id, site_prefix, *all_audit_ports),
         ).fetchall()
 
-        devices_with_ether48: set[str] = set()
-        devices_with_ether49: set[str] = set()
+        devices_with_expected: dict[str, set[str]] = {}  # expected_port -> set of device identities
+        devices_with_wrong: dict[str, set[str]] = {}
+
         for row in port_rows:
             identity = str(row["identity"] or "").strip()
             iface = str(row["port_interface"] or "").strip()
-            if iface == "ether48":
-                devices_with_ether48.add(identity)
-            elif iface == "ether49":
-                devices_with_ether49.add(identity)
+            for expected, wrong in wrong_port_map.items():
+                if iface == expected:
+                    devices_with_expected.setdefault(expected, set()).add(identity)
+                elif iface == wrong:
+                    devices_with_wrong.setdefault(wrong, set()).add(identity)
 
-        # Switches with ether48 configured but no ether49: likely using ether48 as uplink.
-        wrong_uplink_candidates = devices_with_ether48 - devices_with_ether49
-
-        # Collect MAC learning evidence on ether48 for the candidates.
+        # MAC learning evidence for all audit ports
         mac_rows = self.db.execute(
-            """
+            f"""
             select d.identity, bh.on_interface, count(*) as mac_count,
                    sum(bh.external) as external_count
             from bridge_hosts bh
             join devices d on d.scan_id=bh.scan_id and d.ip=bh.ip
             where bh.scan_id=?
-              and d.identity like '000007%'
-              and bh.on_interface in ('ether48', 'ether49')
+              and d.identity like ?
+              and bh.on_interface in ({port_placeholders})
             group by d.identity, bh.on_interface
             """,
-            (scan_id,),
+            (scan_id, site_prefix, *all_audit_ports),
         ).fetchall()
 
         mac_evidence: dict[str, dict[str, Any]] = {}
@@ -11763,46 +11813,53 @@ print(json.dumps(out))
                 "external_count": int(row["external_count"] or 0),
             }
 
-        # A device has confirmed wrong uplink if it has MAC learning on ether48
-        # but no ether49 port — meaning ether48 is carrying upstream traffic.
         wrong_uplink: list[dict[str, Any]] = []
-        for identity in sorted(wrong_uplink_candidates):
-            evidence = mac_evidence.get(identity, {})
-            ether48_ev = evidence.get("ether48", {})
-            wrong_uplink.append({
-                "device": identity,
-                "issue": "ether48_used_as_uplink",
-                "detail": "Switch has ether48 configured but no ether49. ether49 is the correct uplink port for NYCHA CRS switches.",
-                "ether48_mac_count": ether48_ev.get("mac_count", 0),
-                "ether48_external_mac_count": ether48_ev.get("external_count", 0),
-                "ether49_present": False,
-            })
-
-        # Also flag devices that have BOTH ether48 and ether49, but ether48
-        # shows upstream MAC learning (external MACs) — patch order may be reversed.
         mixed_order: list[dict[str, Any]] = []
-        for identity in sorted(devices_with_ether48 & devices_with_ether49):
-            evidence = mac_evidence.get(identity, {})
-            ether48_ev = evidence.get("ether48", {})
-            ether49_ev = evidence.get("ether49", {})
-            ether48_ext = int(ether48_ev.get("external_count") or 0)
-            ether49_ext = int(ether49_ev.get("external_count") or 0)
-            # If ether48 has significant external (upstream) MAC learning while ether49 has none,
-            # the uplink cable may be on the wrong port.
-            if ether48_ext > 0 and ether49_ext == 0:
-                mixed_order.append({
+
+        for expected_port, wrong_port in wrong_port_map.items():
+            expected_set = devices_with_expected.get(expected_port, set())
+            wrong_set = devices_with_wrong.get(wrong_port, set())
+
+            # Devices with wrong port but no expected port
+            candidates = wrong_set - expected_set
+            for identity in sorted(candidates):
+                ev = mac_evidence.get(identity, {}).get(wrong_port, {})
+                wrong_uplink.append({
                     "device": identity,
-                    "issue": "ether48_carrying_upstream_traffic",
-                    "detail": "Switch has both ether48 and ether49 configured. ether48 shows upstream MACs but ether49 does not — uplink may be on the wrong port.",
-                    "ether48_mac_count": ether48_ev.get("mac_count", 0),
-                    "ether48_external_mac_count": ether48_ext,
-                    "ether49_mac_count": ether49_ev.get("mac_count", 0),
-                    "ether49_external_mac_count": ether49_ext,
+                    "issue": f"{wrong_port}_used_as_uplink",
+                    "detail": (
+                        f"Switch has {wrong_port} configured but no {expected_port}. "
+                        f"{expected_port} is the correct uplink port for this switch model at site {effective_site_id}."
+                    ),
+                    f"{wrong_port}_mac_count": ev.get("mac_count", 0),
+                    f"{wrong_port}_external_mac_count": ev.get("external_count", 0),
+                    f"{expected_port}_present": False,
                 })
+
+            # Devices with BOTH ports where wrong port carries upstream traffic
+            for identity in sorted(wrong_set & expected_set):
+                ev_wrong = mac_evidence.get(identity, {}).get(wrong_port, {})
+                ev_expected = mac_evidence.get(identity, {}).get(expected_port, {})
+                wrong_ext = int(ev_wrong.get("external_count") or 0)
+                expected_ext = int(ev_expected.get("external_count") or 0)
+                if wrong_ext > 0 and expected_ext == 0:
+                    mixed_order.append({
+                        "device": identity,
+                        "issue": f"{wrong_port}_carrying_upstream_traffic",
+                        "detail": (
+                            f"Switch has both {wrong_port} and {expected_port} configured. "
+                            f"{wrong_port} shows upstream MACs but {expected_port} does not — uplink may be on the wrong port."
+                        ),
+                        f"{wrong_port}_mac_count": ev_wrong.get("mac_count", 0),
+                        f"{wrong_port}_external_mac_count": wrong_ext,
+                        f"{expected_port}_mac_count": ev_expected.get("mac_count", 0),
+                        f"{expected_port}_external_mac_count": expected_ext,
+                    })
 
         total_issues = len(wrong_uplink) + len(mixed_order)
         return {
-            "site_id": "000007",
+            "site_id": effective_site_id,
+            "site_name": site_name,
             "scan_id": scan_id,
             "total_issues": total_issues,
             "wrong_uplink_port": wrong_uplink,
@@ -11810,10 +11867,10 @@ print(json.dumps(out))
             "mixed_patch_order": mixed_order,
             "mixed_patch_order_count": len(mixed_order),
             "summary": (
-                f"{total_issues} NYCHA switch port issue(s) found: "
-                f"{len(wrong_uplink)} using ether48 instead of ether49 as uplink, "
-                f"{len(mixed_order)} with upstream traffic on ether48 when ether49 is also present."
-            ) if total_issues > 0 else "No NYCHA switch uplink port mismatches detected in the latest scan.",
+                f"{total_issues} switch port issue(s) found at {site_name}: "
+                f"{len(wrong_uplink)} using wrong uplink port, "
+                f"{len(mixed_order)} with upstream traffic on wrong port."
+            ) if total_issues > 0 else f"No switch uplink port mismatches detected at {site_name} in the latest scan.",
         }
 
     def _prefix_to_address(self, building_prefix: str) -> str | None:

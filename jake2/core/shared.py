@@ -59,13 +59,19 @@ SITE_ALIAS_MAP: dict[str, str] = {
 }
 
 
+# WHY: switch_uplink_port is the expected uplink interface on CRS switches at this site.
+# Used by get_switch_port_audit to detect mispatched switches universally across all sites,
+# not just NYCHA. ether49 is correct for CRS354-48G; ether25 is correct for CRS326-24G.
+# A site may list multiple candidates (first match wins in audit logic).
+# mgmt_subnet is the management network CIDR used by the network scanner at this site.
 SITE_SERVICE_PROFILES: dict[str, dict[str, Any]] = {
-    # WHY: Savoy is TP-Link/TAUC with OLT evidence, so customer state should prefer export and OLT/topology evidence over PPP-only assumptions.
     "000002": {
         "name": "Savoy",
         "aliases": ["savoy"],
         "service_mode": "dhcp_tauc_tp_link",
         "uses_olt": True,
+        "mgmt_subnet": "192.168.55.0/24",
+        "switch_uplink_ports": ["ether49", "ether25", "sfp-sfpplus1"],
         "olts": [
             {"olt_name": "000002.OLT01", "olt_ip": "192.168.55.98"},
             {"olt_name": "000002.OLT02", "olt_ip": "192.168.55.97"},
@@ -79,12 +85,13 @@ SITE_SERVICE_PROFILES: dict[str, dict[str, Any]] = {
         "primary_sources": ["local_online_cpe_export", "router_arp", "trace_mac", "local_olt_field_notes", "netbox_site_inventory"],
         "count_preference": ["local_online_cpe_export", "router_arp", "router_ppp_active"],
     },
-    # WHY: Park79 is router-centric but still needs DHCP and ARP corroboration instead of collapsing to PPP-only reasoning.
     "000003": {
         "name": "Park79",
         "aliases": ["park79", "park 79"],
         "service_mode": "routeros_ppp_primary",
         "uses_olt": False,
+        "mgmt_subnet": None,
+        "switch_uplink_ports": ["ether49", "ether25", "sfp-sfpplus1"],
         "summary": "Park79 site. Do not assume PPP-only evidence; prefer DHCP and ARP alongside PPP when classifying customer state.",
         "primary_sources": ["live_dhcp_leases", "router_arp", "router_ppp_active", "netbox_site_inventory"],
         "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
@@ -95,6 +102,8 @@ SITE_SERVICE_PROFILES: dict[str, dict[str, Any]] = {
         "aliases": ["cambridge"],
         "service_mode": "routeros_ppp_primary",
         "uses_olt": False,
+        "mgmt_subnet": None,
+        "switch_uplink_ports": ["ether49", "ether25", "sfp-sfpplus1"],
         "last_mile": "ghn_positron",
         "summary": (
             "Cambridge Square site. Last-mile technology is G.hn over Positron GAM adapters — "
@@ -106,32 +115,37 @@ SITE_SERVICE_PROFILES: dict[str, dict[str, Any]] = {
         "primary_sources": ["live_dhcp_leases", "router_arp", "router_ppp_active", "netbox_site_inventory"],
         "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
     },
-    # WHY: Essex is router-centric but still needs DHCP and ARP corroboration instead of PPP-only reasoning.
     "000005": {
         "name": "Essex",
         "aliases": ["essex"],
         "service_mode": "routeros_ppp_primary",
         "uses_olt": False,
+        "mgmt_subnet": None,
+        "switch_uplink_ports": ["ether49", "ether25", "sfp-sfpplus1"],
         "summary": "Essex site. Do not assume PPP-only evidence; prefer DHCP and ARP alongside PPP when classifying customer state.",
         "primary_sources": ["live_dhcp_leases", "router_arp", "router_ppp_active", "netbox_site_inventory"],
         "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
     },
-    # WHY: Claiborne is router-centric but still needs DHCP and ARP corroboration instead of PPP-only reasoning.
     "000006": {
         "name": "Claiborne",
         "aliases": ["claiborne"],
         "service_mode": "routeros_ppp_primary",
         "uses_olt": False,
+        "mgmt_subnet": None,
+        "switch_uplink_ports": ["ether49", "ether25", "sfp-sfpplus1"],
         "summary": "Claiborne site. Do not assume PPP-only evidence; prefer DHCP and ARP alongside PPP when classifying customer state.",
         "primary_sources": ["live_dhcp_leases", "router_arp", "router_ppp_active", "netbox_site_inventory"],
         "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
     },
     # WHY: NYCHA is switch-access and Vilo/TP-Link heavy, so switch and export evidence outrank any OLT mental model.
+    # WHY: switch_uplink_ports for 000007 CRS354-48G-4S+2Q+RM is ether49. ether48 is a mispatch.
     "000007": {
         "name": "NYCHA Brooklyn",
         "aliases": ["nycha"],
         "service_mode": "dhcp_switch_access_primary",
         "uses_olt": False,
+        "mgmt_subnet": "192.168.44.0/24",
+        "switch_uplink_ports": ["ether49", "sfp-sfpplus1"],
         "summary": "Switch-access TP-Link and Vilo site. Prefer local subscriber export, switch MAC sightings, bridge evidence, and Vilo audit data over OLT assumptions.",
         "primary_sources": ["local_online_cpe_export", "trace_mac", "switch_mac_evidence", "vilo_inventory_audit", "netbox_site_inventory"],
         "count_preference": ["local_online_cpe_export", "router_arp", "router_ppp_active"],
@@ -142,6 +156,8 @@ SITE_SERVICE_PROFILES: dict[str, dict[str, Any]] = {
         "aliases": ["chenoweth"],
         "service_mode": "dhcp_tauc_tp_link_olt",
         "uses_olt": True,
+        "mgmt_subnet": None,
+        "switch_uplink_ports": ["ether25", "sfp-sfpplus1"],
         "olts": [],
         "summary": "TP-Link HC220 + TP-Link OLT site. Prefer local subscriber export, TAUC runtime, OLT ONU state, OLT-side MAC evidence, and SwitchOS edge state over PPP-only assumptions.",
         "primary_sources": ["local_online_cpe_export", "tauc_runtime", "live_olt_onu_state", "olt_mac_table", "switchos_edge_state", "netbox_site_inventory"],
@@ -153,6 +169,8 @@ SITE_SERVICE_PROFILES: dict[str, dict[str, Any]] = {
         "aliases": ["euclid"],
         "service_mode": "dhcp_tauc_tp_link_olt",
         "uses_olt": True,
+        "mgmt_subnet": None,
+        "switch_uplink_ports": ["ether25", "sfp-sfpplus1"],
         "olts": [
             {"olt_name": "000011.OLT01", "olt_ip": "10.64.30.22"},
             {"olt_name": "000011.OLT02", "olt_ip": "10.64.30.23"},
@@ -163,12 +181,13 @@ SITE_SERVICE_PROFILES: dict[str, dict[str, Any]] = {
         "primary_sources": ["live_dhcp_leases", "tauc_runtime", "live_olt_onu_state", "router_arp", "router_ppp_active", "netbox_site_inventory"],
         "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
     },
-    # WHY: Longwood is another OLT/PON site where optical and DHCP evidence are first-class.
     "000012": {
         "name": "Longwood",
         "aliases": ["longwood"],
         "service_mode": "dhcp_tauc_tp_link_olt",
         "uses_olt": True,
+        "mgmt_subnet": None,
+        "switch_uplink_ports": ["ether25", "sfp-sfpplus1"],
         "olts": [
             {"olt_name": "000012.OLT01", "olt_ip": "100.64.19.224"},
         ],
@@ -176,67 +195,89 @@ SITE_SERVICE_PROFILES: dict[str, dict[str, Any]] = {
         "primary_sources": ["live_dhcp_leases", "tauc_runtime", "live_olt_onu_state", "router_arp", "router_ppp_active", "netbox_site_inventory"],
         "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
     },
-    # WHY: Londonderry is router-centric but still needs DHCP and ARP corroboration instead of PPP-only reasoning.
     "000014": {
         "name": "Londonderry",
         "aliases": ["londonderry"],
         "service_mode": "routeros_ppp_primary",
         "uses_olt": False,
+        "mgmt_subnet": None,
+        "switch_uplink_ports": ["ether49", "ether25", "sfp-sfpplus1"],
         "summary": "Londonderry site. Do not assume PPP-only evidence; prefer DHCP and ARP alongside PPP when classifying customer state.",
         "primary_sources": ["live_dhcp_leases", "router_arp", "router_ppp_active", "netbox_site_inventory"],
         "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
     },
-    # WHY: Millersville is router-centric but still needs DHCP and ARP corroboration instead of PPP-only reasoning.
     "000015": {
         "name": "Millersville",
         "aliases": ["millersville"],
         "service_mode": "routeros_ppp_primary",
         "uses_olt": False,
+        "mgmt_subnet": None,
+        "switch_uplink_ports": ["ether49", "ether25", "sfp-sfpplus1"],
         "summary": "Millersville site. Do not assume PPP-only evidence; prefer DHCP and ARP alongside PPP when classifying customer state.",
         "primary_sources": ["live_dhcp_leases", "router_arp", "router_ppp_active", "netbox_site_inventory"],
         "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
     },
-    # WHY: Woodlea is router-centric but still needs DHCP and ARP corroboration instead of PPP-only reasoning.
     "000016": {
         "name": "Woodlea",
         "aliases": ["woodlea"],
         "service_mode": "routeros_ppp_primary",
         "uses_olt": False,
+        "mgmt_subnet": None,
+        "switch_uplink_ports": ["ether49", "ether25", "sfp-sfpplus1"],
         "summary": "Woodlea site. Do not assume PPP-only evidence; prefer DHCP and ARP alongside PPP when classifying customer state.",
         "primary_sources": ["live_dhcp_leases", "router_arp", "router_ppp_active", "netbox_site_inventory"],
         "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
     },
-    # WHY: Liberty Terrace is router-centric but operators use both spaced and compressed aliases.
     "000017": {
         "name": "Liberty Terrace",
         "aliases": ["liberty terrace", "libertyterrace"],
         "service_mode": "routeros_ppp_primary",
         "uses_olt": False,
+        "mgmt_subnet": None,
+        "switch_uplink_ports": ["ether49", "ether25", "sfp-sfpplus1"],
         "summary": "Liberty Terrace site. Do not assume PPP-only evidence; prefer DHCP and ARP alongside PPP when classifying customer state.",
         "primary_sources": ["live_dhcp_leases", "router_arp", "router_ppp_active", "netbox_site_inventory"],
         "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
     },
-    # WHY: Festival Field has been confused with Chenoweth in the past, so its identity must stay distinct.
     "000021": {
         "name": "Festival Field",
         "aliases": ["festival field", "festivalfield"],
         "service_mode": "routeros_ppp_primary",
         "uses_olt": False,
+        "mgmt_subnet": None,
+        "switch_uplink_ports": ["ether49", "ether25", "sfp-sfpplus1"],
         "summary": "Festival Field site. Do not treat this site as Chenoweth. Do not assume PPP-only evidence; prefer DHCP and ARP alongside PPP when classifying customer state.",
         "primary_sources": ["live_dhcp_leases", "router_arp", "router_ppp_active", "netbox_site_inventory"],
         "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
     },
-    # WHY: Sweetwater is router-centric but still needs DHCP and ARP corroboration instead of PPP-only reasoning.
     "000022": {
         "name": "Sweetwater",
         "aliases": ["sweetwater"],
         "service_mode": "routeros_ppp_primary",
         "uses_olt": False,
+        "mgmt_subnet": None,
+        "switch_uplink_ports": ["ether49", "ether25", "sfp-sfpplus1"],
         "summary": "Sweetwater site. Do not assume PPP-only evidence; prefer DHCP and ARP alongside PPP when classifying customer state.",
         "primary_sources": ["live_dhcp_leases", "router_arp", "router_ppp_active", "netbox_site_inventory"],
         "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
     },
 }
+
+
+def get_site_profile(site_id: str) -> dict[str, Any]:
+    """Return the service profile for a site, or a safe empty default."""
+    return SITE_SERVICE_PROFILES.get(site_id, {})
+
+
+def get_site_uplink_ports(site_id: str) -> list[str]:
+    """Return expected uplink port names for a site. Used by port audit logic."""
+    return get_site_profile(site_id).get("switch_uplink_ports", ["ether49", "ether25", "sfp-sfpplus1"])
+
+
+def get_site_mgmt_subnet(site_id: str) -> str | None:
+    """Return the management subnet CIDR for a site, or None if not known."""
+    return get_site_profile(site_id).get("mgmt_subnet")
+
 
 
 def normalize_address_text(value: str | None) -> str:
@@ -249,18 +290,9 @@ def normalize_address_text(value: str | None) -> str:
     text = re.sub(r"\beast\s+ny\b", "east new york", text)
     text = re.sub(r"\be\s+ny\b", "east new york", text)
     replacements = {
-        "ave": "avenue",
-        "av": "avenue",
-        "st": "street",
-        "rd": "road",
-        "pl": "place",
-        "blvd": "boulevard",
-        "dr": "drive",
-        "ln": "lane",
-        "ct": "court",
-        "pkwy": "parkway",
-        "ter": "terrace",
-        "terr": "terrace",
+        "ave": "avenue", "av": "avenue", "st": "street", "rd": "road",
+        "pl": "place", "blvd": "boulevard", "dr": "drive", "ln": "lane",
+        "ct": "court", "pkwy": "parkway", "ter": "terrace", "terr": "terrace",
     }
     for short, long in replacements.items():
         text = re.sub(rf"\b{short}\b", long, text)
@@ -281,8 +313,7 @@ def bare_street_name(value: str | None) -> str:
     street = str(value or "").strip()
     street = re.sub(
         r"\b(street|avenue|road|place|boulevard|drive|lane|court|parkway|terrace)\b$",
-        "",
-        street,
+        "", street,
     )
     street = re.sub(r"\s+", " ", street).strip()
     return street
@@ -359,43 +390,22 @@ def resolve_address_candidates(text: str) -> list[dict[str, str]]:
     for rows in index.values():
         for row in rows:
             if row.get("street_name") and row["street_name"] in normalized_query:
-                matches = [dict(candidate) for candidate_rows in index.values() for candidate in candidate_rows if candidate.get("street_name") == row["street_name"]]
+                matches = [dict(c) for cv in index.values() for c in cv if c.get("street_name") == row["street_name"]]
                 if matches:
                     return matches
             if row.get("street_base") and row["street_base"] in normalized_query:
-                matches = [dict(candidate) for candidate_rows in index.values() for candidate in candidate_rows if candidate.get("street_base") == row["street_base"]]
+                matches = [dict(c) for cv in index.values() for c in cv if c.get("street_base") == row["street_base"]]
                 if matches:
                     return matches
     return []
 
 
-UPLINK_PORT_PREFIXES = (
-    "sfp-sfpplus",
-    "sfp",
-    "ether1",
-    "bond",
-    "bridge",
-)
-
-
-SUBSCRIBER_PORT_PREFIXES = (
-    "ether2",
-    "ether3",
-    "ether4",
-    "ether5",
-    "ether6",
-    "ether7",
-    "ether8",
-)
+UPLINK_PORT_PREFIXES = ("sfp-sfpplus", "sfp", "ether1", "bond", "bridge")
+SUBSCRIBER_PORT_PREFIXES = ("ether2", "ether3", "ether4", "ether5", "ether6", "ether7", "ether8")
 
 
 def classify_port_role(port_name: str) -> str:
-    """
-    Returns one of:
-      "uplink"     — trunk/uplink port, not a direct drop
-      "subscriber" — likely a direct subscriber port
-      "unknown"    — cannot determine from name alone
-    """
+    """Returns 'uplink', 'subscriber', or 'unknown'."""
     if not port_name:
         return "unknown"
     lower = str(port_name).lower().strip()
@@ -412,7 +422,6 @@ SUBSCRIBER_NAME_TO_MAC: dict[str, str] = {
     "savoy1unit3f": "6083e7af5fce",
     "savoy1unit3n": "e4fac4b25e92",
 }
-
 
 SUBSCRIBER_NAME_TO_OLT: dict[str, dict[str, str]] = {
     "savoy1unit2n": {"olt": "000002.OLT01", "olt_ip": "192.168.55.98", "pon": "Gpon1/0/1", "onu": "1"},
@@ -499,7 +508,6 @@ def _parse_env_assignment(raw_line: str, path: Path, line_number: int) -> tuple[
 def load_env_file(path: Path) -> bool:
     if not path.exists():
         return False
-
     loaded_any = False
     file_values: dict[str, str] = {}
     for line_number, raw in enumerate(path.read_text(encoding="utf-8", errors="ignore").splitlines(), start=1):
@@ -517,7 +525,6 @@ def load_env_file(path: Path) -> bool:
             loaded_any = True
             continue
         if current != value:
-            # WHY: Existing process env wins to preserve override behavior, but conflicting file values must be visible for auditability.
             os.environ.setdefault("JAKE_ENV_CONFLICTS", "")
             conflict = f"{key} from {path}"
             prior = os.environ["JAKE_ENV_CONFLICTS"]
@@ -527,13 +534,9 @@ def load_env_file(path: Path) -> bool:
 
 def apply_env_aliases() -> None:
     aliases = [
-        # WHY: Older device-access env files sometimes used a generic `username` key. Preserve compatibility by normalizing it into the explicit SSH_MCP_USERNAME variable.
         ("SSH_MCP_USERNAME", "username"),
-        # WHY: Older ssh_mcp setups stored the password under a generic `password` key. Preserve compatibility while preferring the explicit Jake2 key.
         ("SSH_MCP_PASSWORD", "password"),
-        # WHY: Some operator env files use NETBOX_BASE_URL while Jake2 runtime code reads NETBOX_URL. Normalize that naming difference automatically.
         ("NETBOX_URL", "NETBOX_BASE_URL"),
-        # WHY: Legacy TAUC/TP-Link environments reused the TP-Link password variable for TAUC auth. Preserve that compatibility path without reversing precedence.
         ("TAUC_PASSWORD", "TPLINK_ID_PASSWORD"),
     ]
     for target, source in aliases:

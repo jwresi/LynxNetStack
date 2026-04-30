@@ -752,7 +752,11 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     scan_parser = sub.add_parser("scan", help="Run full subnet discovery + snapshot")
-    scan_parser.add_argument("--subnet", default="192.168.44.0/24")
+    scan_parser.add_argument(
+        "--subnet",
+        default=os.environ.get("JAKE_SCAN_SUBNET", "192.168.44.0/24"),
+        help="Management subnet to scan (default: JAKE_SCAN_SUBNET env or 192.168.44.0/24)"
+    )
     scan_parser.add_argument("--workers", type=int, default=48)
     scan_parser.add_argument("--tcp-timeout", type=float, default=0.7)
     scan_parser.add_argument("--api-timeout", type=float, default=3.0)

@@ -834,7 +834,7 @@ def parse_operator_query(query: str) -> dict:
         'nycha port issues', 'nycha switch uplink',
     )
     if any(token in lower for token in nycha_port_audit_tokens):
-        return {'action': 'get_nycha_port_audit', 'params': {}}
+        return {'action': 'get_nycha_port_audit', 'params': {'site_id': effective_site_id or '000007'}}
 
     nycha_audit_workbook_tokens = (
         'audit workbook', 'generate audit workbook',
@@ -3948,7 +3948,7 @@ def run_operator_query(ops: Any, query: str) -> dict[str, Any]:
         'assess_site_incident': lambda p: assess_site_incident(p['site_id']),
         'get_site_loop_suspicion': lambda p: ops.get_site_loop_suspicion(p['site_id']),
         'get_site_bridge_host_weirdness': lambda p: ops.get_site_bridge_host_weirdness(p['site_id']),
-        'get_nycha_port_audit': lambda p: ops.get_nycha_port_audit(),
+        'get_nycha_port_audit': lambda p: ops.get_nycha_port_audit(p.get('site_id')),
         'generate_nycha_audit_workbook': lambda p: ops.generate_nycha_audit_workbook(p.get('address_text'), p.get('switch_identity'), p.get('site_id')),
         'get_live_cnwave_radio_neighbors': lambda p: ops.get_live_cnwave_radio_neighbors(p.get('site_id'), p.get('name'), p.get('query')),
         'get_radio_handoff_trace': lambda p: ops.get_radio_handoff_trace(p.get('query'), p.get('name')),
