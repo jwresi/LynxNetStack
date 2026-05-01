@@ -1549,7 +1549,12 @@ def infer_site_service_mode(site_id: str | None, has_local_export: bool, has_ppp
     canonical_site = canonical_scope(site_id) if site_id else None
     explicit = SITE_SERVICE_PROFILES.get(canonical_site or "") or {}
     explicit_mode = str(explicit.get("service_mode") or "").strip() or None
-    if explicit_mode == "dhcp_tauc_tp_link":
+    if explicit_mode in ("dhcp_tauc_tp_link", "dhcp_tauc_tp_link_olt"):
+        # WHY: both TP-Link variants (with and without OLT) share the same
+        # evidence-classification logic. dhcp_tauc_tp_link_olt sites (Atlantis,
+        # Chenoweth, Euclid, Longwood) are fiber/OLT deployments — their count
+        # source is OLT ONU state + DHCP, not PPPoE. Return the explicit mode
+        # so the caller can display the right evidence guidance.
         if (has_local_export or has_dhcp_leases) and has_ppp_sessions:
             return "dhcp_tauc_tp_link_with_ppp_evidence"
         if has_local_export and has_dhcp_leases:
@@ -1558,6 +1563,9 @@ def infer_site_service_mode(site_id: str | None, has_local_export: bool, has_ppp
             return explicit_mode
         if has_ppp_sessions:
             return "dhcp_tauc_tp_link_profile_but_ppp_only_evidence"
+        # No evidence sources yet — still return the explicit mode so Jake can
+        # give the operator correct guidance (check OLT, add TAUC export, etc.)
+        return explicit_mode
     if explicit_mode == "routeros_ppp_primary":
         if (has_local_export or has_dhcp_leases) and has_ppp_sessions:
             return "routeros_ppp_primary_with_local_online_cpe_export"

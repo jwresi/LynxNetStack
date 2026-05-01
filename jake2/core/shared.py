@@ -57,6 +57,8 @@ SITE_ALIAS_MAP: dict[str, str] = {
     # WHY: Sweetwater appears in natural-language operator queries.
     "sweetwater": "000022",
     "atlantis": "000023",
+    "findlay": "000018",
+    "lefferts": "000020",
 }
 
 
@@ -119,23 +121,34 @@ SITE_SERVICE_PROFILES: dict[str, dict[str, Any]] = {
     "000005": {
         "name": "Essex",
         "aliases": ["essex"],
+        # WHY: Essex is fiber/PPPoE with TP-Link OLTs on 192.168.110.0/24
         "service_mode": "routeros_ppp_primary",
-        "uses_olt": False,
-        "mgmt_subnet": None,
+        "uses_olt": True,
+        "mgmt_subnet": "192.168.110.0/24",
         "switch_uplink_ports": ["ether49", "ether25", "sfp-sfpplus1"],
-        "summary": "Essex site. Do not assume PPP-only evidence; prefer DHCP and ARP alongside PPP when classifying customer state.",
-        "primary_sources": ["live_dhcp_leases", "router_arp", "router_ppp_active", "netbox_site_inventory"],
+        "olts": [
+            {"olt_name": "000005.OLT01", "olt_ip": "192.168.110.2"},
+            {"olt_name": "000005.OLT02", "olt_ip": "192.168.110.3"},
+            {"olt_name": "000005.OLT03", "olt_ip": "192.168.110.4"},
+        ],
+        "summary": "Essex site. Fiber/PPPoE with TP-Link OLTs on 192.168.110.0/24. Prefer OLT ONU state, DHCP leases, and ARP alongside PPP.",
+        "primary_sources": ["live_dhcp_leases", "live_olt_onu_state", "router_arp", "router_ppp_active", "netbox_site_inventory"],
         "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
     },
     "000006": {
         "name": "Claiborne",
         "aliases": ["claiborne"],
-        "service_mode": "routeros_ppp_primary",
-        "uses_olt": False,
-        "mgmt_subnet": None,
+        # WHY: Claiborne is fiber/DHCP with TP-Link OLTs on 100.64.18.0/24
+        "service_mode": "dhcp_tauc_tp_link_olt",
+        "uses_olt": True,
+        "mgmt_subnet": "100.64.18.0/24",
         "switch_uplink_ports": ["ether49", "ether25", "sfp-sfpplus1"],
-        "summary": "Claiborne site. Do not assume PPP-only evidence; prefer DHCP and ARP alongside PPP when classifying customer state.",
-        "primary_sources": ["live_dhcp_leases", "router_arp", "router_ppp_active", "netbox_site_inventory"],
+        "olts": [
+            {"olt_name": "000006.OLT01", "olt_ip": "100.64.18.176"},
+            {"olt_name": "000006.OLT02", "olt_ip": "100.64.18.224"},
+        ],
+        "summary": "Claiborne site. Fiber/DHCP with TP-Link OLTs on 100.64.18.0/24. Prefer OLT ONU state, TAUC/runtime, and DHCP leases.",
+        "primary_sources": ["live_dhcp_leases", "tauc_runtime", "live_olt_onu_state", "router_arp", "netbox_site_inventory"],
         "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
     },
     # WHY: NYCHA is switch-access and Vilo/TP-Link heavy, so switch and export evidence outrank any OLT mental model.
@@ -169,10 +182,13 @@ SITE_SERVICE_PROFILES: dict[str, dict[str, Any]] = {
         "aliases": ["chenoweth"],
         "service_mode": "dhcp_tauc_tp_link_olt",
         "uses_olt": True,
-        "mgmt_subnet": None,
+        # WHY: Chenoweth switches + router on 100.64.3.0/24
+        "mgmt_subnet": "100.64.3.0/24",
         "switch_uplink_ports": ["ether25", "sfp-sfpplus1"],
-        "olts": [],
-        "summary": "TP-Link HC220 + TP-Link OLT site. Prefer local subscriber export, TAUC runtime, OLT ONU state, OLT-side MAC evidence, and SwitchOS edge state over PPP-only assumptions.",
+        "olts": [
+            {"olt_name": "000008.OLT01", "olt_ip": "100.64.3.230"},
+        ],
+        "summary": "TP-Link HC220 + TP-Link OLT site. Mgmt on 100.64.3.0/24. Prefer local subscriber export, TAUC runtime, OLT ONU state, OLT-side MAC evidence, and SwitchOS edge state.",
         "primary_sources": ["local_online_cpe_export", "tauc_runtime", "live_olt_onu_state", "olt_mac_table", "switchos_edge_state", "netbox_site_inventory"],
         "count_preference": ["local_online_cpe_export", "router_arp", "router_ppp_active"],
     },
@@ -182,7 +198,8 @@ SITE_SERVICE_PROFILES: dict[str, dict[str, Any]] = {
         "aliases": ["euclid"],
         "service_mode": "dhcp_tauc_tp_link_olt",
         "uses_olt": True,
-        "mgmt_subnet": None,
+        # WHY: Euclid OLTs on 10.64.28.0/21 (10.64.30.x and 10.64.31.x)
+        "mgmt_subnet": "10.64.28.0/21",
         "switch_uplink_ports": ["ether25", "sfp-sfpplus1"],
         "olts": [
             {"olt_name": "000011.OLT01", "olt_ip": "10.64.30.22"},
@@ -190,7 +207,7 @@ SITE_SERVICE_PROFILES: dict[str, dict[str, Any]] = {
             {"olt_name": "000011.OLT03", "olt_ip": "10.64.31.223"},
             {"olt_name": "000011.OLT04", "olt_ip": "10.64.31.224"},
         ],
-        "summary": "Euclid site. TP-Link OLT and ONU optics evidence matter here. Prefer live DHCP leases, TAUC/runtime, OLT ONU state, and optical alert clustering over PPP-only assumptions.",
+        "summary": "Euclid site. TP-Link OLT/ONU optics on 10.64.28.0/21. Prefer live DHCP leases, TAUC/runtime, OLT ONU state, and optical alert clustering.",
         "primary_sources": ["live_dhcp_leases", "tauc_runtime", "live_olt_onu_state", "router_arp", "router_ppp_active", "netbox_site_inventory"],
         "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
     },
@@ -199,80 +216,150 @@ SITE_SERVICE_PROFILES: dict[str, dict[str, Any]] = {
         "aliases": ["longwood"],
         "service_mode": "dhcp_tauc_tp_link_olt",
         "uses_olt": True,
-        "mgmt_subnet": None,
+        "mgmt_subnet": "100.64.19.0/24",
         "switch_uplink_ports": ["ether25", "sfp-sfpplus1"],
         "olts": [
             {"olt_name": "000012.OLT01", "olt_ip": "100.64.19.224"},
         ],
-        "summary": "Longwood site. Treat OLT/PON/ONU optics and live DHCP evidence as first-class sources. Do not collapse this site into a PPP-only summary when optical alarms are active.",
+        "summary": "Longwood site. OLT on 100.64.19.0/24. Treat OLT/PON/ONU optics and live DHCP evidence as first-class sources.",
         "primary_sources": ["live_dhcp_leases", "tauc_runtime", "live_olt_onu_state", "router_arp", "router_ppp_active", "netbox_site_inventory"],
         "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
     },
     "000014": {
         "name": "Londonderry",
         "aliases": ["londonderry"],
-        "service_mode": "routeros_ppp_primary",
-        "uses_olt": False,
-        "mgmt_subnet": None,
-        "switch_uplink_ports": ["ether49", "ether25", "sfp-sfpplus1"],
-        "summary": "Londonderry site. Do not assume PPP-only evidence; prefer DHCP and ARP alongside PPP when classifying customer state.",
-        "primary_sources": ["live_dhcp_leases", "router_arp", "router_ppp_active", "netbox_site_inventory"],
+        # WHY: Londonderry is DHCP + TP-Link OLTs. OLTs at 100.64.23.153 and 100.64.23.224,
+        # both in the 100.64.20.0/22 management prefix. Router at 172.27.134.168.
+        # Confirmed from NetBox and live BigMac OLT MAC table (200 HC220 ONUs seen).
+        "service_mode": "dhcp_tauc_tp_link_olt",
+        "uses_olt": True,
+        "mgmt_subnet": "100.64.20.0/22",
+        "switch_uplink_ports": ["sfp-sfpplus6", "sfp-sfpplus7", "ether25"],
+        "olts": [
+            {"olt_name": "000014.OLT01", "olt_ip": "100.64.23.153"},
+            {"olt_name": "000014.OLT02", "olt_ip": "100.64.23.224"},
+        ],
+        "summary": (
+            "Londonderry site. Active fiber/DHCP deployment with two TP-Link DS-P7001-08 OLTs. "
+            "OLT01 on PON 1/0/1-3 (28 HC220 ONUs), OLT02 on PON 1/0/2-8 (37 HC220 ONUs). "
+            "Router sfp-sfpplus6 feeds OLT01 subscribers, sfp-sfpplus7 feeds OLT02. "
+            "Management subnet 100.64.20.0/22. Router at 172.27.134.168. "
+            "Prefer OLT ONU state, TAUC/runtime, and live DHCP leases."
+        ),
+        "primary_sources": ["live_dhcp_leases", "tauc_runtime", "live_olt_onu_state", "router_arp", "netbox_site_inventory"],
         "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
     },
     "000015": {
         "name": "Millersville",
         "aliases": ["millersville"],
-        "service_mode": "routeros_ppp_primary",
-        "uses_olt": False,
-        "mgmt_subnet": None,
-        "switch_uplink_ports": ["ether49", "ether25", "sfp-sfpplus1"],
-        "summary": "Millersville site. Do not assume PPP-only evidence; prefer DHCP and ARP alongside PPP when classifying customer state.",
-        "primary_sources": ["live_dhcp_leases", "router_arp", "router_ppp_active", "netbox_site_inventory"],
+        "service_mode": "dhcp_tauc_tp_link_olt",
+        "uses_olt": True,
+        "mgmt_subnet": "100.64.24.0/24",
+        "switch_uplink_ports": ["ether25", "sfp-sfpplus1"],
+        "olts": [
+            {"olt_name": "000015.OLT01", "olt_ip": "100.64.24.224"},
+        ],
+        "summary": "Millersville site. Fiber/DHCP with TP-Link OLT on 100.64.24.0/24. Prefer OLT ONU state, TAUC/runtime, and DHCP leases.",
+        "primary_sources": ["live_dhcp_leases", "tauc_runtime", "live_olt_onu_state", "router_arp", "netbox_site_inventory"],
         "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
     },
     "000016": {
         "name": "Woodlea",
         "aliases": ["woodlea"],
-        "service_mode": "routeros_ppp_primary",
-        "uses_olt": False,
-        "mgmt_subnet": None,
-        "switch_uplink_ports": ["ether49", "ether25", "sfp-sfpplus1"],
-        "summary": "Woodlea site. Do not assume PPP-only evidence; prefer DHCP and ARP alongside PPP when classifying customer state.",
-        "primary_sources": ["live_dhcp_leases", "router_arp", "router_ppp_active", "netbox_site_inventory"],
+        "service_mode": "dhcp_tauc_tp_link_olt",
+        "uses_olt": True,
+        "mgmt_subnet": "100.64.25.0/24",
+        "switch_uplink_ports": ["ether25", "sfp-sfpplus1"],
+        "olts": [
+            {"olt_name": "000016.OLT01", "olt_ip": "100.64.25.224"},
+        ],
+        "summary": "Woodlea site. Fiber/DHCP with TP-Link OLT on 100.64.25.0/24. Prefer OLT ONU state, TAUC/runtime, and DHCP leases.",
+        "primary_sources": ["live_dhcp_leases", "tauc_runtime", "live_olt_onu_state", "router_arp", "netbox_site_inventory"],
         "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
     },
     "000017": {
         "name": "Liberty Terrace",
         "aliases": ["liberty terrace", "libertyterrace"],
-        "service_mode": "routeros_ppp_primary",
-        "uses_olt": False,
-        "mgmt_subnet": None,
-        "switch_uplink_ports": ["ether49", "ether25", "sfp-sfpplus1"],
-        "summary": "Liberty Terrace site. Do not assume PPP-only evidence; prefer DHCP and ARP alongside PPP when classifying customer state.",
-        "primary_sources": ["live_dhcp_leases", "router_arp", "router_ppp_active", "netbox_site_inventory"],
+        "service_mode": "dhcp_tauc_tp_link_olt",
+        "uses_olt": True,
+        "mgmt_subnet": "100.64.26.0/24",
+        "switch_uplink_ports": ["ether25", "sfp-sfpplus1"],
+        "olts": [
+            {"olt_name": "000017.OLT01", "olt_ip": "100.64.26.224"},
+        ],
+        "summary": "Liberty Terrace site. Fiber/DHCP with TP-Link OLT on 100.64.26.0/24. Prefer OLT ONU state, TAUC/runtime, and DHCP leases.",
+        "primary_sources": ["live_dhcp_leases", "tauc_runtime", "live_olt_onu_state", "router_arp", "netbox_site_inventory"],
         "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
     },
     "000021": {
         "name": "Festival Field",
         "aliases": ["festival field", "festivalfield"],
-        "service_mode": "routeros_ppp_primary",
-        "uses_olt": False,
-        "mgmt_subnet": None,
-        "switch_uplink_ports": ["ether49", "ether25", "sfp-sfpplus1"],
-        "summary": "Festival Field site. Do not treat this site as Chenoweth. Do not assume PPP-only evidence; prefer DHCP and ARP alongside PPP when classifying customer state.",
-        "primary_sources": ["live_dhcp_leases", "router_arp", "router_ppp_active", "netbox_site_inventory"],
+        # WHY: Festival Field is fiber/DHCP with 6x TP-Link OLTs + cnWave V5000/V2000 radios
+        "service_mode": "dhcp_tauc_tp_link_olt",
+        "uses_olt": True,
+        "mgmt_subnet": "100.64.30.0/24",
+        "switch_uplink_ports": ["ether25", "sfp-sfpplus1"],
+        "olts": [
+            {"olt_name": "000021.OLT01", "olt_ip": "100.64.30.216"},
+            {"olt_name": "000021.OLT02", "olt_ip": "100.64.30.215"},
+            {"olt_name": "000021.OLT03", "olt_ip": "100.64.30.218"},
+            {"olt_name": "000021.OLT04", "olt_ip": "100.64.30.232"},
+            {"olt_name": "000021.OLT05", "olt_ip": "100.64.30.220"},
+            {"olt_name": "000021.OLT06", "olt_ip": "100.64.30.231"},
+        ],
+        "summary": (
+            "Festival Field site (000021). Fiber/DHCP with 6x TP-Link OLTs + cnWave V5000/V2000 radios. "
+            "All on 100.64.30.0/24 management subnet. Do not treat as Chenoweth. "
+            "Prefer OLT ONU state, TAUC/runtime, and DHCP leases."
+        ),
+        "primary_sources": ["live_dhcp_leases", "tauc_runtime", "live_olt_onu_state", "router_arp", "netbox_site_inventory"],
         "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
     },
     "000022": {
         "name": "Sweetwater",
         "aliases": ["sweetwater"],
-        "service_mode": "routeros_ppp_primary",
+        # WHY: Sweetwater is fiber/DHCP with 4x TP-Link OLTs + cnWave V5000/V2000 radios
+        "service_mode": "dhcp_tauc_tp_link_olt",
+        "uses_olt": True,
+        "mgmt_subnet": "100.64.28.0/24",
+        "switch_uplink_ports": ["ether25", "sfp-sfpplus1"],
+        "olts": [
+            {"olt_name": "000022.OLT01", "olt_ip": "100.64.28.223"},
+            {"olt_name": "000022.OLT02", "olt_ip": "100.64.28.224"},
+            {"olt_name": "000022.OLT03", "olt_ip": "100.64.28.222"},
+            {"olt_name": "000022.OLT04", "olt_ip": "100.64.28.146"},
+        ],
+        "summary": "Sweetwater site (000022). Fiber/DHCP with 4x TP-Link OLTs + cnWave radios on 100.64.28.0/24. Prefer OLT ONU state, TAUC/runtime, and DHCP leases.",
+        "primary_sources": ["live_dhcp_leases", "tauc_runtime", "live_olt_onu_state", "router_arp", "netbox_site_inventory"],
+        "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
+    },
+    "000018": {
+        "name": "Findlay",
+        "aliases": ["findlay"],
+        # WHY: Findlay is active fiber/DHCP site. OLT IP not yet confirmed (device has no primary IP in NetBox).
+        # Management subnet inferred as 100.64.29.0/24 from PDU/UPS IPs in NetBox.
+        "service_mode": "dhcp_tauc_tp_link_olt",
+        "uses_olt": True,
+        "mgmt_subnet": "100.64.29.0/24",
+        "switch_uplink_ports": ["ether25", "sfp-sfpplus1"],
+        "olts": [
+            {"olt_name": "000018.OLT01", "olt_ip": None},
+        ],
+        "summary": "Findlay site (000018). Active fiber/DHCP. OLT management IP not yet confirmed in NetBox. Prefer OLT ONU state, TAUC/runtime, and DHCP leases when available.",
+        "primary_sources": ["live_dhcp_leases", "tauc_runtime", "live_olt_onu_state", "router_arp", "netbox_site_inventory"],
+        "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
+    },
+    "000020": {
+        "name": "Lefferts",
+        "aliases": ["lefferts"],
+        # WHY: Lefferts is active Ethernet/DHCP. Router at 172.27.137.26, CRS326 acting as router.
+        "service_mode": "dhcp_tauc_tp_link",
         "uses_olt": False,
         "mgmt_subnet": None,
-        "switch_uplink_ports": ["ether49", "ether25", "sfp-sfpplus1"],
-        "summary": "Sweetwater site. Do not assume PPP-only evidence; prefer DHCP and ARP alongside PPP when classifying customer state.",
-        "primary_sources": ["live_dhcp_leases", "router_arp", "router_ppp_active", "netbox_site_inventory"],
-        "count_preference": ["live_dhcp_leases", "router_arp", "router_ppp_active"],
+        "switch_uplink_ports": ["ether25", "sfp-sfpplus1"],
+        "summary": "Lefferts site (000020). Active Ethernet/DHCP site. Router is a CRS326 at 172.27.137.26. No OLT confirmed.",
+        "primary_sources": ["live_dhcp_leases", "router_arp", "netbox_site_inventory"],
+        "count_preference": ["live_dhcp_leases", "router_arp"],
     },
     "000023": {
         "name": "Atlantis",

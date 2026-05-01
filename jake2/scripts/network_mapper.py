@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import ipaddress
 import json
+import os
 import socket
 import sqlite3
 from pathlib import Path
