@@ -4,7 +4,7 @@ kea-sync: lease_poller.py
 Polls Kea DHCP4 REST API for active leases and syncs subscriber IPs to NetBox IPAM.
 
 Resolution chain per lease:
-  giaddr (switch mgmt IP)
+  giaddr (switch mgmt IP, e.g. 100.65.X.11)
     -> NetBox device with primary_ip4 = giaddr
       -> interface ETH{N}  (ether3 -> ETH3)
         -> cable -> circuit termination Z
@@ -12,7 +12,9 @@ Resolution chain per lease:
             -> IP upserted in NetBox IPAM, linked to circuit
 
 Environment variables (all configurable):
-  KEA_API_URL              default: http://172.27.28.50:8000
+  KEA_API_URL              default: http://172.27.209.248:8000
+  KEA_API_USER             default: kea
+  KEA_API_PASSWORD         required (stored in /etc/kea/kea-api-secret on jumpB)
   NETBOX_URL               default: http://172.27.48.233:8001
   NETBOX_TOKEN             required
   POLL_INTERVAL_SECONDS    default: 60
@@ -36,7 +38,13 @@ log = logging.getLogger(__name__)
 # WHY: These defaults match the ResiBridge production environment.
 # Override with environment variables for any other deployment:
 #   KEA_API_URL=http://<kea-host>:8000 NETBOX_URL=http://<netbox-host>:8001
-KEA_API_URL = os.environ.get("KEA_API_URL", "http://172.27.28.50:8000")
+# Kea is on jumpB (172.27.209.248 ZeroTier / 172.16.1.125 primary).
+# The control agent listens on 127.0.0.1:8000 on jumpB itself; we reach it
+# via ZeroTier. KEA_API_USER/KEA_API_PASSWORD come from /etc/kea/kea-api-secret
+# (htpasswd format: user:password).
+KEA_API_URL = os.environ.get("KEA_API_URL", "http://172.27.209.248:8000")
+KEA_API_USER = os.environ.get("KEA_API_USER", "kea")
+KEA_API_PASSWORD = os.environ.get("KEA_API_PASSWORD", "")
 NETBOX_URL = os.environ.get("NETBOX_URL", "http://172.27.48.233:8001").rstrip("/")
 NETBOX_TOKEN = os.environ.get("NETBOX_TOKEN", "")
 POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL_SECONDS", "60"))
@@ -53,13 +61,19 @@ NETBOX_HEADERS = {
 
 
 def kea_get_all_leases() -> list[dict]:
-    """Return all active DHCPv4 leases from Kea control agent."""
+    """Return all active DHCPv4 leases from Kea control agent.
+
+    Kea control agent requires HTTP Basic Auth. Credentials come from
+    KEA_API_USER / KEA_API_PASSWORD env vars (sourced from /etc/kea/kea-api-secret
+    on jumpB, which stores them in htpasswd user:password format).
+    """
     payload = {"command": "lease4-get-all", "service": ["dhcp4"]}
+    auth = (KEA_API_USER, KEA_API_PASSWORD) if KEA_API_PASSWORD else None
     try:
-        resp = requests.post(KEA_API_URL, json=payload, timeout=10)
+        resp = requests.post(KEA_API_URL, json=payload, auth=auth, timeout=30)
         resp.raise_for_status()
         data = resp.json()
-        # Kea returns a list of per-service responses
+        # Kea returns a list of per-service responses (one per service in "service":[])
         if isinstance(data, list) and data:
             result = data[0]
             if result.get("result") == 0:
@@ -157,8 +171,17 @@ def nb_patch(path: str, body: dict) -> Optional[dict]:
 
 
 def find_device_by_mgmt_ip(giaddr: str) -> Optional[dict]:
-    """Find NetBox device whose primary_ip4 matches the relay giaddr."""
-    results = nb_get("dcim/devices/", {"q": giaddr})
+    """Find NetBox device whose primary_ip4 matches the relay giaddr.
+
+    Uses the NetBox 'primary_ip' filter (matches the IP portion of the
+    address/prefix stored on the device, e.g. '100.65.3.11'). Falls back
+    to iterating results if the filter returns more than one match.
+
+    WHY: Using {"q": giaddr} (free-text search) was unreliable — it searches
+    name/description fields, not IP addresses, and can return false positives.
+    The 'primary_ip' param filters by the actual primary_ip4 address.
+    """
+    results = nb_get("dcim/devices/", {"primary_ip": giaddr})
     for dev in results:
         primary = (dev.get("primary_ip4") or {}).get("address", "")
         if primary.split("/")[0] == giaddr:
@@ -240,9 +263,17 @@ def upsert_ip_for_circuit(ip_address: str, circuit: dict, lease_mac: str) -> Non
 
 
 def process_lease(lease: dict) -> None:
-    """Process a single Kea lease: resolve circuit, upsert IP in NetBox."""
+    """Process a single Kea lease: resolve circuit, upsert IP in NetBox.
+
+    Kea lease4-get-all returns records where 'giaddr' is a top-level field
+    (the relay agent IP, e.g. 100.65.X.11 for building X primary switch).
+    It is NOT nested under relay-agent-info.
+    """
     ip_address = lease.get("ip-address")
-    giaddr = lease.get("relay-agent-info", {}).get("giaddr") or lease.get("giaddr")
+    # WHY: giaddr is a top-level field in Kea lease records, not nested under
+    # relay-agent-info. The relay-agent-info sub-object contains circuit-id/
+    # remote-id but not giaddr itself.
+    giaddr = lease.get("giaddr")
     hw_address = lease.get("hw-address", "")
 
     if not ip_address or not giaddr:
@@ -289,9 +320,17 @@ def poll_once() -> None:
 def main() -> None:
     if not NETBOX_TOKEN:
         raise RuntimeError("NETBOX_TOKEN environment variable is required")
+    if not KEA_API_PASSWORD:
+        raise RuntimeError(
+            "KEA_API_PASSWORD environment variable is required. "
+            "Read it from /etc/kea/kea-api-secret on jumpB (sudo required)."
+        )
     if DRY_RUN:
         log.info("DRY_RUN=true — no writes will be made to NetBox")
-    log.info("kea-sync starting. Kea=%s NetBox=%s interval=%ds", KEA_API_URL, NETBOX_URL, POLL_INTERVAL)
+    log.info(
+        "kea-sync starting. Kea=%s user=%s NetBox=%s interval=%ds",
+        KEA_API_URL, KEA_API_USER, NETBOX_URL, POLL_INTERVAL,
+    )
     while True:
         poll_once()
         time.sleep(POLL_INTERVAL)
