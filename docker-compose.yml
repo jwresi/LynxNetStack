@@ -1,29 +1,59 @@
 version: "3.9"
 
-# LynxNetStack — Full stack Docker Compose
-# Runs all ResiBridge platform services together.
+# LynxNetStack — Unified stack for jake.lynxnet.co
+#
+# All traffic enters through the nginx gateway on ports 80/443.
+# Internal services are NOT exposed on host ports — only nginx is.
+#
+# Setup:
+#   cp .env.example .env && edit .env
+#   cp jake2/config/.env.example jake2/config/.env && edit jake2/config/.env
+#   cp billing/netbox-stripe-sync/.env.example billing/netbox-stripe-sync/.env && edit it
+#   Place Cloudflare origin cert at nginx/certs/origin.crt and nginx/certs/origin.key
+#   Place RouterOS package at provisioner/routeros/routeros.npk
 #
 # Usage:
-#   docker compose up -d               # start all
-#   docker compose up -d jake2         # start one service
-#   docker compose logs -f jake2       # follow logs
+#   docker compose up -d                  # start everything
+#   docker compose up -d --build jake2    # rebuild and restart one service
+#   docker compose logs -f nginx          # follow gateway logs
+#   docker compose ps                     # check health status
 #
-# Prerequisites:
-#   - Copy jake2/config/.env.example -> jake2/config/.env and fill in values
-#   - Copy billing/netbox-stripe-sync/.env.example -> billing/netbox-stripe-sync/.env
-#   - Place routeros.npk at provisioner/routeros/routeros.npk
+# kea-sync runs on jumpB directly (not in this compose) — it must be
+# colocated with the Kea DHCP4 container to reach 127.0.0.1:8000.
 
 services:
+
+  # ── nginx: public gateway ────────────────────────────────────────────────────
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - jake2
+      - lynxmsp-backend
+      - lynxmsp-frontend
+      - provisioner-backend
+      - provisioner-frontend
+      - netbox-stripe-sync
+      - tikfig
+    networks:
+      - lynxnet
 
   # ── Jake2: network intelligence engine ──────────────────────────────────────
   jake2:
     build:
       context: ./jake2
       dockerfile: Dockerfile
+      target: production
     container_name: jake2
     restart: unless-stopped
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
     volumes:
       - ./jake2/config/.env:/app/config/.env:ro
       - ./jake2/config/certs:/app/config/certs:ro
@@ -38,6 +68,46 @@ services:
     networks:
       - lynxnet
 
+  # ── LynxMSP: operator CRM ────────────────────────────────────────────────────
+  lynxmsp-backend:
+    build:
+      context: ./lynxmsp/backend
+      dockerfile: Dockerfile
+    container_name: lynxmsp-backend
+    restart: unless-stopped
+    expose:
+      - "8000"
+    volumes:
+      - lynxmsp_data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:///data/lynxcrm.db
+      - SECRET_KEY=${LYNXMSP_SECRET_KEY:-change-me-in-production}
+      - NETBOX_URL=${NETBOX_URL:-http://172.27.48.233:8001}
+      - NETBOX_TOKEN=${NETBOX_API_TOKEN}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/auth/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - lynxnet
+
+  lynxmsp-frontend:
+    build:
+      context: ./lynxmsp/frontend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        - REACT_APP_API_URL=/crm
+    container_name: lynxmsp-frontend
+    restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      - lynxmsp-backend
+    networks:
+      - lynxnet
+
   # ── Provisioner: switch provisioning UI ─────────────────────────────────────
   provisioner-backend:
     build:
@@ -45,8 +115,8 @@ services:
       dockerfile: Dockerfile
     container_name: provisioner-backend
     restart: unless-stopped
-    ports:
-      - "5001:5001"
+    expose:
+      - "5001"
     volumes:
       - ./provisioner/configs:/app/configs
       - ./provisioner/routeros:/app/routeros:ro
@@ -61,95 +131,45 @@ services:
     build:
       context: ./provisioner/frontend
       dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=/provision
     container_name: provisioner-frontend
     restart: unless-stopped
-    ports:
-      - "3001:3000"
-    environment:
-      - REACT_APP_API_URL=http://localhost:5001
+    expose:
+      - "80"
     depends_on:
       - provisioner-backend
     networks:
       - lynxnet
 
-  # ── Tikfig: config generator ─────────────────────────────────────────────────
+  # ── Tikfig: RouterOS config generator ────────────────────────────────────────
   tikfig:
     build:
       context: ./tikfig
       dockerfile: Dockerfile
     container_name: tikfig
     restart: unless-stopped
-    ports:
-      - "8082:8080"
+    expose:
+      - "8080"
     volumes:
       - ./tikfig/config.yml:/app/config.yml:ro
       - ./tikfig/templates:/app/templates:ro
     networks:
       - lynxnet
 
-  # ── LynxMSP: operator CRM ────────────────────────────────────────────────────
-  lynxmsp-backend:
-    build:
-      context: ./lynxmsp/backend
-      dockerfile: Dockerfile
-    container_name: lynxmsp-backend
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    volumes:
-      - lynxmsp_data:/app/data
-    environment:
-      - DATABASE_URL=sqlite:///data/lynxcrm.db
-      - SECRET_KEY=${LYNXMSP_SECRET_KEY:-change-me-in-production}
-      - CORS_ORIGINS=http://localhost:3000,http://localhost:3002
-      - NETBOX_URL=http://172.27.48.233:8001
-      - NETBOX_TOKEN=${NETBOX_API_TOKEN}
-    networks:
-      - lynxnet
-
-  lynxmsp-frontend:
-    build:
-      context: ./lynxmsp/frontend
-      dockerfile: Dockerfile
-    container_name: lynxmsp-frontend
-    restart: unless-stopped
-    ports:
-      - "3002:3000"
-    environment:
-      - REACT_APP_API_URL=http://localhost:8000
-    depends_on:
-      - lynxmsp-backend
-    networks:
-      - lynxnet
-
-  # ── Billing: netbox-stripe-sync sidecar ──────────────────────────────────────
+  # ── Billing: netbox-stripe-sync ───────────────────────────────────────────────
   netbox-stripe-sync:
     build:
       context: ./billing/netbox-stripe-sync
       dockerfile: Dockerfile
     container_name: netbox-stripe-sync
     restart: unless-stopped
-    ports:
-      - "8083:8080"
+    expose:
+      - "8080"
     env_file:
       - ./billing/netbox-stripe-sync/.env
     volumes:
       - stripe_sync_data:/data
-    networks:
-      - lynxnet
-
-  # ── Kea Sync: lease poller ────────────────────────────────────────────────────
-  kea-sync:
-    build:
-      context: ./kea-sync
-      dockerfile: Dockerfile
-    container_name: kea-sync
-    restart: unless-stopped
-    environment:
-      - KEA_API_URL=http://172.27.28.50:8000
-      - NETBOX_URL=http://172.27.48.233:8001
-      - NETBOX_TOKEN=${NETBOX_API_TOKEN}
-      - POLL_INTERVAL_SECONDS=60
     networks:
       - lynxnet
 

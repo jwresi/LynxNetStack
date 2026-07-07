@@ -19,9 +19,15 @@ from .database import get_db, init_db
 
 app = FastAPI(title="LynxCRM API", version="1.0.0", description="Comprehensive ISP/MSP/WISP Management Platform")
 
+_CORS_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "https://jake.lynxnet.co",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

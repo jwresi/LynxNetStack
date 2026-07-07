@@ -1,35 +1,20 @@
 FROM node:18-alpine AS builder
 
-ARG REACT_APP_API_URL
+ARG REACT_APP_API_URL=/provision
 ENV REACT_APP_API_URL=$REACT_APP_API_URL
 
 WORKDIR /app
 
-# Copy package files
 COPY package.json package-lock.json* ./
-
-# Install dependencies
 RUN npm ci --only=production || npm install
-
-# Copy source code
 COPY . .
-
-# Build application
 RUN npm run build
 
-# Production stage
-FROM node:18-alpine
+# Production stage — serve with nginx for subpath support
+FROM nginx:alpine
 
-WORKDIR /app
+COPY --from=builder /app/build /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/nginx.conf
 
-# Install serve globally
-RUN apk add --no-cache curl wget && npm install -g serve
-
-# Copy built files from builder stage
-COPY --from=builder /app/build ./build
-
-# Expose port
-EXPOSE 3000
-
-# Serve the application
-CMD ["serve", "-s", "build", "-l", "3000"]
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

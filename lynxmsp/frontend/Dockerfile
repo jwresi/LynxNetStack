@@ -1,4 +1,4 @@
-# --- Development Stage (default) ---
+# --- Development Stage ---
 FROM node:18-alpine AS development
 WORKDIR /app
 COPY package*.json ./
@@ -9,6 +9,8 @@ CMD ["npm", "start"]
 
 # --- Production Build Stage ---
 FROM node:18-alpine AS build
+ARG REACT_APP_API_URL=/crm
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --legacy-peer-deps
