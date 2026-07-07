@@ -249,6 +249,7 @@ inventory_observability  netbox_readonly_mcp              NetBox devices/circuit
                          alertmanager_readonly_mcp        Prometheus Alertmanager
                          bigmac_readonly_mcp              RouterOS switch state via BigMac proxy
                          site_observability_mcp           Per-site online count, fault summary
+                         kea_mcp                          On-demand Kea lease queries (SSH → jumpB)
 wireless_transport       cnwave_exporter_readonly_mcp     Cambium cnWave RF metrics
 vendor_controllers       tauc_mcp                         TP-Link OLT/ACS controller
                          vilo_mcp                         Vilo mesh AP portal
@@ -307,15 +308,21 @@ and whether the circuit appears up.
 1. IPAM → IP Addresses → search the subscriber IP or MAC
 2. Or: DCIM → Circuits → search CX-Circuit ID (e.g. `000004.001.12B`)
 
-### Via Kea (last-resort, on jumpB)
+### Via kea_mcp (live Kea query)
 
-```bash
-ssh jumpB
-/opt/kea-dhcp/list-leases | python3 -m json.tool | grep -A 10 '"giaddr": "100.65.4.11"'
+Ask Jake directly — `kea_mcp` SSHes to jumpB on demand:
+
+```
+"what leases does cambridge have right now"
+"find the lease for MAC aa:bb:cc:dd:ee:ff"
+"what IP is on 100.65.4.142"
 ```
 
-This dumps all active leases for a subnet. Useful when NetBox IPAM is stale
-and you need the authoritative current lease.
+Or use the MCP tools directly:
+- `get_leases_for_site("cambridge")` — all active leases for a site
+- `find_lease_by_mac("aa:bb:cc:dd:ee:ff")` — lease by MAC
+- `find_lease_by_ip("100.65.4.142")` — lease by IP
+- `get_lease_summary()` — count per subnet across all 63 subnets
 
 ### Reading a Kea lease record
 
