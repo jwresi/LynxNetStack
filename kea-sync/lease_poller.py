@@ -3,6 +3,10 @@ kea-sync: lease_poller.py
 
 Polls Kea DHCP4 REST API for active leases and syncs subscriber IPs to NetBox IPAM.
 
+Deployment: run this on jumpB. The Kea control agent listens on 127.0.0.1:8000
+and accepts unauthenticated requests from localhost. Do NOT run from an external
+host — the control agent only listens on loopback, not on a routable interface.
+
 Resolution chain per lease:
   giaddr (switch mgmt IP, e.g. 100.65.X.11)
     -> NetBox device with primary_ip4 = giaddr
@@ -12,9 +16,7 @@ Resolution chain per lease:
             -> IP upserted in NetBox IPAM, linked to circuit
 
 Environment variables (all configurable):
-  KEA_API_URL              default: http://172.27.209.248:8000
-  KEA_API_USER             default: kea
-  KEA_API_PASSWORD         required (stored in /etc/kea/kea-api-secret on jumpB)
+  KEA_API_URL              default: http://127.0.0.1:8000  (localhost on jumpB)
   NETBOX_URL               default: http://172.27.48.233:8001
   NETBOX_TOKEN             required
   POLL_INTERVAL_SECONDS    default: 60
@@ -35,16 +37,7 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-# WHY: These defaults match the ResiBridge production environment.
-# Override with environment variables for any other deployment:
-#   KEA_API_URL=http://<kea-host>:8000 NETBOX_URL=http://<netbox-host>:8001
-# Kea is on jumpB (172.27.209.248 ZeroTier / 172.16.1.125 primary).
-# The control agent listens on 127.0.0.1:8000 on jumpB itself; we reach it
-# via ZeroTier. KEA_API_USER/KEA_API_PASSWORD come from /etc/kea/kea-api-secret
-# (htpasswd format: user:password).
-KEA_API_URL = os.environ.get("KEA_API_URL", "http://172.27.209.248:8000")
-KEA_API_USER = os.environ.get("KEA_API_USER", "kea")
-KEA_API_PASSWORD = os.environ.get("KEA_API_PASSWORD", "")
+KEA_API_URL = os.environ.get("KEA_API_URL", "http://127.0.0.1:8000")
 NETBOX_URL = os.environ.get("NETBOX_URL", "http://172.27.48.233:8001").rstrip("/")
 NETBOX_TOKEN = os.environ.get("NETBOX_TOKEN", "")
 POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL_SECONDS", "60"))
@@ -61,16 +54,10 @@ NETBOX_HEADERS = {
 
 
 def kea_get_all_leases() -> list[dict]:
-    """Return all active DHCPv4 leases from Kea control agent.
-
-    Kea control agent requires HTTP Basic Auth. Credentials come from
-    KEA_API_USER / KEA_API_PASSWORD env vars (sourced from /etc/kea/kea-api-secret
-    on jumpB, which stores them in htpasswd user:password format).
-    """
+    """Return all active DHCPv4 leases from Kea control agent."""
     payload = {"command": "lease4-get-all", "service": ["dhcp4"]}
-    auth = (KEA_API_USER, KEA_API_PASSWORD) if KEA_API_PASSWORD else None
     try:
-        resp = requests.post(KEA_API_URL, json=payload, auth=auth, timeout=30)
+        resp = requests.post(KEA_API_URL, json=payload, timeout=30)
         resp.raise_for_status()
         data = resp.json()
         # Kea returns a list of per-service responses (one per service in "service":[])
@@ -320,16 +307,11 @@ def poll_once() -> None:
 def main() -> None:
     if not NETBOX_TOKEN:
         raise RuntimeError("NETBOX_TOKEN environment variable is required")
-    if not KEA_API_PASSWORD:
-        raise RuntimeError(
-            "KEA_API_PASSWORD environment variable is required. "
-            "Read it from /etc/kea/kea-api-secret on jumpB (sudo required)."
-        )
     if DRY_RUN:
         log.info("DRY_RUN=true — no writes will be made to NetBox")
     log.info(
-        "kea-sync starting. Kea=%s user=%s NetBox=%s interval=%ds",
-        KEA_API_URL, KEA_API_USER, NETBOX_URL, POLL_INTERVAL,
+        "kea-sync starting. Kea=%s NetBox=%s interval=%ds",
+        KEA_API_URL, NETBOX_URL, POLL_INTERVAL,
     )
     while True:
         poll_once()

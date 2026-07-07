@@ -13,7 +13,7 @@ LynxNetStack is the unified ISP management platform for ResiBridge, a WISP/MDU o
 | NetBox | `http://172.27.48.233:8001` | Source of truth. Token in `jake2/config/.env` |
 | BigMac (RouterOS API proxy) | `http://172.27.226.246:8081` | All live switch reads go through here |
 | Prometheus | `http://172.27.72.179:9090` | Metrics for switches, CPE, OLT |
-| Kea DHCP4 (target) | `172.27.28.50` | Ubuntu 22.04 VM, not yet deployed |
+| Kea DHCP4 | jumpB `127.0.0.1:8000` | Running in Docker on jumpB, control agent on loopback |
 | Splynx | Live | Active billing — do NOT cancel |
 
 ## Key Commands Per Component
@@ -78,8 +78,7 @@ uvicorn app.main:app --reload --port 8080
 ## Current Migration Priority
 
 1. Scale CX-Circuit model to all NYCHA subscribers (script: `netbox-scripts/cx_circuits/populate_cx_circuits.py`)
-2. Deploy and configure Kea DHCP4 on 172.27.28.50
-3. Run kea-sync lease poller (maps Kea leases → NetBox IPAM)
+2. Run kea-sync lease poller on jumpB (maps Kea leases → NetBox IPAM)
 4. Deploy netbox-billing plugin to production NetBox
 5. Deploy netbox-stripe-sync with real credentials
 
