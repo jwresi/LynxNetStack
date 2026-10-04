@@ -1,25 +1,15 @@
-# --- Development Stage ---
-FROM node:18-alpine AS development
+# Build stage — runs from the lynxmsp-ui source context
+FROM node:20-alpine AS build
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --legacy-peer-deps
-COPY . .
-EXPOSE 3000
-CMD ["npm", "start"]
-
-# --- Production Build Stage ---
-FROM node:18-alpine AS build
-ARG REACT_APP_API_URL=/crm
-ENV REACT_APP_API_URL=$REACT_APP_API_URL
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --legacy-peer-deps
+RUN npm ci
 COPY . .
 RUN npm run build
 
-# --- Production Nginx Stage ---
-FROM nginx:alpine AS production
-COPY --from=build /app/build /usr/share/nginx/html
+# Serve stage
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+# nginx.conf lives alongside the source in pypr-core/apps/lynxmsp-ui/
 COPY nginx.conf /etc/nginx/nginx.conf
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

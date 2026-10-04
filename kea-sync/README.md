@@ -1,5 +1,10 @@
 # kea-sync
 
+> **On-demand lease queries are handled by `kea_mcp.py` (Jake2 MCP server), which
+> hits the ISC Stork REST API at 172.27.209.248:9080 directly over ZeroTier — no
+> SSH to jumpB required. kea-sync is only needed for the batch IPAM sync job that
+> writes leases into NetBox.**
+
 Polls the Kea DHCP4 control agent for active leases and syncs subscriber IP
 addresses into NetBox IPAM, linking each IP to its CX-Circuit and Tenant.
 

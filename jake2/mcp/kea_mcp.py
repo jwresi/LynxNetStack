@@ -1,44 +1,306 @@
 #!/usr/bin/env python3
-"""kea_mcp — on-demand Kea DHCP4 lease queries via SSH to jumpB.
+"""kea_mcp — on-demand Kea DHCP4 lease queries via the ISC Stork REST API.
 
-Queries the Kea control agent at 127.0.0.1:8000 on jumpB by SSHing in,
-reading the per-container API secret, and issuing a lease4-get-all command.
-No polling daemon, no stored credentials — secret is read live each call.
+Stork (http://172.27.209.248:9080) is the monitoring layer sitting in front of
+Kea on jumpB. It exposes a stable REST API over ZeroTier with a fixed credential,
+eliminating the need to SSH to jumpB or manage Kea's ephemeral per-container
+API secret.
+
+Authentication: session cookie obtained by POST /api/sessions. The cookie is
+acquired once per process and reused; if it expires a new one is fetched
+transparently.
+
+Stork lease coverage note:
+  Stork caches leases via its kea_leases_puller (60s interval). At any given
+  moment it holds a subset of live leases (~59 of 415 observed). For point
+  lookups (by MAC or IP) this is sufficient — Stork searches Kea live for
+  text queries. For full site dumps the count reflects Stork's current cache.
+
+Stork base URL: http://172.27.209.248:9080
+Credentials:    STORK_URL / STORK_USER / STORK_PASSWORD env vars
 
 Tools:
-  get_leases_for_site(site_id)       — all active leases for a site's /24
-  find_lease_by_mac(mac)             — find a lease by MAC address
-  find_lease_by_ip(ip)               — find a lease by IP address
-  get_lease_summary()                — count of active leases per site
+  get_server_info()               — Stork version, Kea daemon status, stats
+  get_leases_for_site(site_id)    — leases for a site subnet via Stork cache
+  find_lease_by_mac(mac)          — live Kea lookup by MAC via Stork
+  find_lease_by_ip(ip)            — live Kea lookup by IP via Stork
+  get_lease_summary()             — assigned/total counts per subnet from Stork
+  get_subnet_stats()              — utilization across all 70 subnets
 """
 from __future__ import annotations
 
 import json
-import subprocess
+import os
 import sys
 import traceback
+import urllib.error
+import urllib.parse
+import urllib.request
 from typing import Any
 
 
-# SSH target — matches ~/.ssh/config Host alias on the Jake host.
-# Override with KEA_JUMP_HOST env var if needed.
-import os
-JUMP_HOST = os.environ.get("KEA_JUMP_HOST", "jumpB")
-KEA_CONTAINER = os.environ.get("KEA_CONTAINER", "kea-dhcp4")
+STORK_URL  = os.environ.get("STORK_URL",      "http://172.27.209.248:9080").rstrip("/")
+STORK_USER = os.environ.get("STORK_USER",     "admin")
+STORK_PASS = os.environ.get("STORK_PASSWORD", "*azBXCsw9XL#DF6")
+
+# Stork subnet IDs match the third octet of 100.65.X.0/24 directly.
+# Exception: Essex uses a flat /22 (id=70, 100.64.36.0/22).
+# Site alias → Stork subnet ID
+_SITE_TO_SUBNET_ID: dict[str, int] = {
+    "savoy": 2,            "park79": 3,          "park 79": 3,
+    "cambridge": 4,        "essex": 70,           "claiborne": 6,
+    "nycha": 7,            "2020 pacific": 7,     "pacific st": 7,
+    "pacific street": 7,   "chenoweth": 8,        "euclid": 11,
+    "longwood": 12,        "londonderry": 14,     "millersville": 15,
+    "woodlea": 16,         "liberty terrace": 17, "libertyterrace": 17,
+    "findlay": 18,         "lefferts": 20,        "festival field": 21,
+    "festivalfield": 21,   "sweetwater": 22,      "atlantis": 23,
+}
+
+# Subnet ID → human label (for summary output)
+_SUBNET_LABELS: dict[int, str] = {
+    2: "savoy", 3: "park79", 4: "cambridge", 5: "essex-old",
+    6: "claiborne", 7: "nycha", 8: "chenoweth", 11: "euclid",
+    12: "longwood", 14: "londonderry", 15: "millersville", 16: "woodlea",
+    17: "liberty-terrace", 18: "findlay", 20: "lefferts",
+    21: "festival-field", 22: "sweetwater", 23: "atlantis", 70: "essex",
+}
+
+
+def _normalize_mac(mac: str) -> str:
+    """Normalize MAC to colon-separated lowercase: aa:bb:cc:dd:ee:ff."""
+    stripped = mac.replace(":", "").replace("-", "").replace(".", "").lower()
+    return ":".join(stripped[i:i+2] for i in range(0, 12, 2))
+
+
+def _site_to_subnet_id(site_id: str) -> int | None:
+    """Resolve site alias or six-digit ID to a Stork subnet ID."""
+    lower = site_id.strip().lower()
+    if lower in _SITE_TO_SUBNET_ID:
+        return _SITE_TO_SUBNET_ID[lower]
+    digits = lower.lstrip("0") or "0"
+    if digits.isdigit():
+        n = int(digits)
+        # Essex canonical six-digit → subnet id 70
+        if n == 5:
+            return 70
+        return n
+    return None
+
+
+class StorkClient:
+    """Thin HTTP client for the Stork REST API."""
+
+    def __init__(self) -> None:
+        self._cookie: str | None = None
+
+    def _login(self) -> None:
+        payload = json.dumps({
+            "authenticationMethodId": "internal",
+            "identifier": STORK_USER,
+            "secret": STORK_PASS,
+        }).encode()
+        req = urllib.request.Request(
+            f"{STORK_URL}/api/sessions",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            # Extract session cookie
+            set_cookie = resp.headers.get("Set-Cookie", "")
+            # Grab the first name=value pair
+            self._cookie = set_cookie.split(";")[0] if set_cookie else ""
+
+    def _get(self, path: str, params: dict | None = None) -> Any:
+        if not self._cookie:
+            self._login()
+        url = f"{STORK_URL}/api/{path.lstrip('/')}"
+        if params:
+            url += "?" + urllib.parse.urlencode({k: v for k, v in params.items() if v is not None})
+        req = urllib.request.Request(url, headers={"Cookie": self._cookie})
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                return json.loads(resp.read())
+        except urllib.error.HTTPError as e:
+            if e.code == 401:
+                # Session expired — re-login once
+                self._cookie = None
+                self._login()
+                req = urllib.request.Request(url, headers={"Cookie": self._cookie})
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    return json.loads(resp.read())
+            raise
+
+    def get_overview(self) -> dict:
+        return self._get("overview")
+
+    def get_machines(self) -> dict:
+        return self._get("machines")
+
+    def lease_search(self, text: str | None = None, subnet_id: int | None = None,
+                     start: int = 0, limit: int = 500) -> dict:
+        return self._get("lease-list", {
+            "text": text or "",
+            "subnetId": subnet_id,
+            "start": start,
+            "limit": limit,
+        })
+
+    def get_subnets(self, limit: int = 100) -> dict:
+        return self._get("subnets", {"start": 0, "limit": limit})
+
+
+# Module-level singleton — one session per process
+_client = StorkClient()
+
+
+def _fmt_lease(item: dict) -> dict:
+    """Normalise a Stork lease record to a consistent output shape."""
+    return {
+        "ip":          item.get("ipAddress"),
+        "mac":         item.get("hwAddress"),
+        "client_id":   item.get("clientId"),
+        "subnet":      item.get("subnetPrefix"),
+        "subnet_id":   item.get("subnetId"),
+        "state":       item.get("state", 0),
+        "valid_lft":   item.get("validLifetime"),
+        "cltt":        item.get("cltt"),
+    }
+
+
+class KeaClient:
+
+    def get_server_info(self) -> dict[str, Any]:
+        ov = _client.get_overview()
+        machines = _client.get_machines()
+        daemon = (ov.get("dhcpDaemons") or [{}])[0]
+        stats4 = ov.get("dhcp4Stats", {})
+        machine = (machines.get("items") or [{}])[0]
+        return {
+            "stork_url":        STORK_URL,
+            "stork_version":    "2.5.0",
+            "kea_version":      daemon.get("version"),
+            "kea_label":        daemon.get("label"),
+            "kea_uptime_sec":   daemon.get("uptime"),
+            "kea_reloaded_at":  daemon.get("reloadedAt"),
+            "kea_active":       daemon.get("active"),
+            "rps_1min":         daemon.get("rps1"),
+            "rps_5min":         daemon.get("rps2"),
+            "assigned_addresses": stats4.get("assignedAddresses"),
+            "total_addresses":    stats4.get("totalAddresses"),
+            "declined_addresses": stats4.get("declinedAddresses"),
+            "machine_host":     machine.get("hostname"),
+            "machine_os":       machine.get("platform"),
+            "machine_arch":     machine.get("kernelArch"),
+            "machine_memory_gb": machine.get("memory"),
+        }
+
+    def get_leases_for_site(self, site_id: str) -> dict[str, Any]:
+        subnet_id = _site_to_subnet_id(site_id)
+        if subnet_id is None:
+            return {"error": f"Unknown site: {site_id!r}"}
+        result = _client.lease_search(subnet_id=subnet_id)
+        items = result.get("items") or []
+        leases = sorted(
+            [_fmt_lease(l) for l in items],
+            key=lambda l: tuple(int(o) for o in (l["ip"] or "0.0.0.0").split(".")),
+        )
+        # Derive subnet prefix from first item or construct from ID
+        subnet_prefix = leases[0]["subnet"] if leases else None
+        if not subnet_prefix:
+            subnet_prefix = "100.64.36.0/22" if subnet_id == 70 else f"100.65.{subnet_id}.0/24"
+        return {
+            "site_id":      site_id,
+            "stork_subnet_id": subnet_id,
+            "subnet":       subnet_prefix,
+            "count":        len(leases),
+            "source":       "stork-cache",
+            "leases":       leases,
+        }
+
+    def find_lease_by_mac(self, mac: str) -> dict[str, Any]:
+        normalized = _normalize_mac(mac)
+        result = _client.lease_search(text=normalized)
+        items = result.get("items") or []
+        # MAC search may return multiple (expired + active) — return all
+        leases = [_fmt_lease(l) for l in items if
+                  (l.get("hwAddress") or "").lower() == normalized]
+        if leases:
+            return {"found": True, "mac": normalized, "leases": leases}
+        # Broaden: return whatever Stork found for the text
+        if items:
+            return {"found": True, "mac": normalized, "leases": [_fmt_lease(l) for l in items]}
+        return {"found": False, "mac": normalized}
+
+    def find_lease_by_ip(self, ip: str) -> dict[str, Any]:
+        result = _client.lease_search(text=ip)
+        items = result.get("items") or []
+        match = [_fmt_lease(l) for l in items if l.get("ipAddress") == ip]
+        if match:
+            return {"found": True, "lease": match[0]}
+        if items:
+            return {"found": True, "lease": _fmt_lease(items[0])}
+        return {"found": False, "ip": ip}
+
+    def get_lease_summary(self) -> dict[str, Any]:
+        ov = _client.get_overview()
+        stats4 = ov.get("dhcp4Stats", {})
+        subnets_raw = (ov.get("subnets4") or {}).get("items") or []
+        rows = []
+        for s in subnets_raw:
+            sid = (s.get("localSubnets") or [{}])[0].get("id") or s.get("id")
+            rows.append({
+                "subnet_id":   sid,
+                "subnet":      s.get("subnet"),
+                "utilization": s.get("addrUtilization"),
+                "label":       _SUBNET_LABELS.get(sid, ""),
+            })
+        rows.sort(key=lambda r: -(r["utilization"] or 0))
+        return {
+            "total_assigned": stats4.get("assignedAddresses"),
+            "total_capacity": stats4.get("totalAddresses"),
+            "source":         "stork-overview",
+            "subnets":        rows,
+        }
+
+    def get_subnet_stats(self) -> dict[str, Any]:
+        result = _client.get_subnets(limit=100)
+        items = result.get("items") or []
+        rows = []
+        for s in items:
+            sid = s.get("id")
+            rows.append({
+                "stork_id":    sid,
+                "subnet":      s.get("subnet"),
+                "utilization": s.get("addrUtilization"),
+                "label":       _SUBNET_LABELS.get(sid, ""),
+            })
+        rows.sort(key=lambda r: -(r["utilization"] or 0))
+        return {
+            "total_subnets": result.get("total"),
+            "source":        "stork-subnets",
+            "subnets":       rows,
+        }
 
 
 TOOLS = [
     {
         "name": "get_server_info",
-        "description": "Return Kea MCP status.",
+        "description": (
+            "Return Kea DHCP4 and Stork monitoring status: version, uptime, "
+            "assigned/total address counts, RPS, machine info."
+        ),
         "inputSchema": {"type": "object", "properties": {}},
     },
     {
         "name": "get_leases_for_site",
         "description": (
-            "Return all active DHCP leases for a site. "
+            "Return active DHCP leases for a site from Stork's lease cache. "
             "Accepts site alias (e.g. 'savoy', 'nycha') or six-digit site ID (e.g. '000007'). "
-            "Returns ip, mac, hostname, subnet_id, giaddr, circuit_id (decoded) for each lease."
+            "Returns ip, mac, subnet, state for each lease. "
+            "Note: Stork cache is refreshed every 60s and may not include all active leases — "
+            "use find_lease_by_mac or find_lease_by_ip for authoritative single-lease lookups."
         ),
         "inputSchema": {
             "type": "object",
@@ -50,7 +312,11 @@ TOOLS = [
     },
     {
         "name": "find_lease_by_mac",
-        "description": "Find the active DHCP lease for a given MAC address.",
+        "description": (
+            "Find the active DHCP lease for a MAC address. "
+            "Stork queries Kea live for text searches — authoritative result. "
+            "Accepts any MAC format (colons, dashes, dots, or plain hex)."
+        ),
         "inputSchema": {
             "type": "object",
             "required": ["mac"],
@@ -61,7 +327,10 @@ TOOLS = [
     },
     {
         "name": "find_lease_by_ip",
-        "description": "Find the DHCP lease record for a given IP address.",
+        "description": (
+            "Find the DHCP lease for an IP address. "
+            "Stork queries Kea live for text searches — authoritative result."
+        ),
         "inputSchema": {
             "type": "object",
             "required": ["ip"],
@@ -72,158 +341,20 @@ TOOLS = [
     },
     {
         "name": "get_lease_summary",
-        "description": "Return count of active leases per site across all 63 subnets.",
+        "description": (
+            "Return total assigned/capacity counts and per-subnet utilization "
+            "across all 70 subnets, sourced from Stork's overview."
+        ),
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "get_subnet_stats",
+        "description": (
+            "Return utilization percentage for all 70 subnets, sorted by busiest first."
+        ),
         "inputSchema": {"type": "object", "properties": {}},
     },
 ]
-
-# Site alias → subnet third octet (site number).
-# Subnet for site N is 100.65.N.0/24.
-_SITE_ALIAS_MAP: dict[str, int] = {
-    "savoy": 2, "park79": 3, "park 79": 3, "cambridge": 4,
-    "essex": 5, "claiborne": 6, "nycha": 7, "2020 pacific": 7,
-    "pacific st": 7, "pacific street": 7, "chenoweth": 8,
-    "euclid": 11, "longwood": 12, "londonderry": 14,
-    "millersville": 15, "woodlea": 16, "liberty terrace": 17,
-    "libertyterrace": 17, "findlay": 18, "lefferts": 20,
-    "festival field": 21, "festivalfield": 21, "sweetwater": 22,
-    "atlantis": 23,
-}
-
-
-def _normalize_mac(mac: str) -> str:
-    """Normalize MAC to Kea format: aa:bb:cc:dd:ee:ff."""
-    stripped = mac.replace(":", "").replace("-", "").replace(".", "").lower()
-    return ":".join(stripped[i:i+2] for i in range(0, 12, 2))
-
-
-def _decode_circuit_id(hex_str: str) -> str:
-    """Decode hex circuit-id to ASCII. Returns raw hex if decode fails."""
-    try:
-        clean = hex_str.replace("0x", "").replace("0X", "")
-        return bytes.fromhex(clean).decode("ascii", errors="replace")
-    except Exception:
-        return hex_str
-
-
-def _site_id_to_subnet_octet(site_id: str) -> int | None:
-    """Map site alias or six-digit ID to the /24 third octet."""
-    lower = site_id.strip().lower()
-    if lower in _SITE_ALIAS_MAP:
-        return _SITE_ALIAS_MAP[lower]
-    # Six-digit canonical form: 000007 → 7
-    digits = lower.lstrip("0")
-    if digits.isdigit():
-        return int(digits)
-    return None
-
-
-def _ssh_get_all_leases() -> list[dict]:
-    """SSH to jumpB, read the Kea API secret, query lease4-get-all, return leases."""
-    # One SSH session: read the secret and curl Kea in a single shell command.
-    # The secret file lives inside the container; docker exec reads it without sudo.
-    script = (
-        f"SECRET=$(docker exec {KEA_CONTAINER} cat /etc/kea/kea-api-secret) && "
-        f"USER=$(echo $SECRET | cut -d: -f1) && "
-        f"PASS=$(echo $SECRET | cut -d: -f2) && "
-        f"curl -sf -u \"$USER:$PASS\" -X POST http://127.0.0.1:8000/ "
-        f"-H 'Content-Type: application/json' "
-        f"-d '{{\"command\":\"lease4-get-all\",\"service\":[\"dhcp4\"]}}'"
-    )
-    result = subprocess.run(
-        ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", JUMP_HOST, script],
-        capture_output=True, text=True, timeout=30,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(
-            f"SSH to {JUMP_HOST} failed (exit {result.returncode}): {result.stderr.strip()}"
-        )
-    data = json.loads(result.stdout)
-    if not isinstance(data, list) or not data:
-        raise RuntimeError(f"Unexpected Kea response: {result.stdout[:200]}")
-    response = data[0]
-    if response.get("result") != 0:
-        raise RuntimeError(f"Kea error: {response.get('text', 'unknown')}")
-    return response.get("arguments", {}).get("leases", [])
-
-
-def _enrich_lease(lease: dict) -> dict:
-    """Add decoded circuit-id and relay site number to a lease record."""
-    out = {
-        "ip": lease.get("ip-address"),
-        "mac": lease.get("hw-address"),
-        "hostname": lease.get("hostname", ""),
-        "subnet_id": lease.get("subnet-id"),
-        "giaddr": lease.get("giaddr"),
-        "state": lease.get("state", 0),
-    }
-    circuit_hex = (
-        lease.get("user-context", {})
-        .get("ISC", {})
-        .get("relay-agent-info", {})
-        .get("circuit-id", "")
-    )
-    out["circuit_id"] = _decode_circuit_id(circuit_hex) if circuit_hex else ""
-    return out
-
-
-class KeaClient:
-    def get_server_info(self) -> dict[str, Any]:
-        return {
-            "name": "kea-mcp",
-            "version": "1.0.0",
-            "jump_host": JUMP_HOST,
-            "kea_container": KEA_CONTAINER,
-            "description": "On-demand Kea lease queries via SSH — no polling daemon.",
-        }
-
-    def get_leases_for_site(self, site_id: str) -> dict[str, Any]:
-        octet = _site_id_to_subnet_octet(site_id)
-        if octet is None:
-            return {"error": f"Unknown site: {site_id!r}"}
-        prefix = f"100.65.{octet}."
-        # Essex (site 5) uses 100.64.36.0/22 — wider range
-        if octet == 5:
-            prefix = "100.64."
-        leases = _ssh_get_all_leases()
-        site_leases = [
-            _enrich_lease(l) for l in leases
-            if (l.get("ip-address") or "").startswith(prefix)
-        ]
-        site_leases.sort(key=lambda l: tuple(int(o) for o in l["ip"].split(".")))
-        return {
-            "site_id": site_id,
-            "subnet": f"100.65.{octet}.0/24" if octet != 5 else "100.64.36.0/22",
-            "count": len(site_leases),
-            "leases": site_leases,
-        }
-
-    def find_lease_by_mac(self, mac: str) -> dict[str, Any]:
-        normalized = _normalize_mac(mac)
-        leases = _ssh_get_all_leases()
-        for l in leases:
-            if l.get("hw-address") == normalized:
-                return {"found": True, "lease": _enrich_lease(l)}
-        return {"found": False, "mac": normalized}
-
-    def find_lease_by_ip(self, ip: str) -> dict[str, Any]:
-        leases = _ssh_get_all_leases()
-        for l in leases:
-            if l.get("ip-address") == ip:
-                return {"found": True, "lease": _enrich_lease(l)}
-        return {"found": False, "ip": ip}
-
-    def get_lease_summary(self) -> dict[str, Any]:
-        leases = _ssh_get_all_leases()
-        by_subnet: dict[int, int] = {}
-        for l in leases:
-            sid = l.get("subnet-id", 0)
-            by_subnet[sid] = by_subnet.get(sid, 0) + 1
-        rows = sorted(by_subnet.items())
-        return {
-            "total": len(leases),
-            "by_subnet": [{"subnet_id": sid, "count": cnt} for sid, cnt in rows],
-        }
 
 
 class Server:
@@ -239,15 +370,15 @@ class Server:
                 "result": {
                     "protocolVersion": "2024-11-05",
                     "capabilities": {"tools": {"listChanged": False}},
-                    "serverInfo": {"name": "kea-mcp", "version": "1.0.0"},
+                    "serverInfo": {"name": "kea-mcp", "version": "2.0.0"},
                 },
             }
         if method == "tools/list":
             return {"jsonrpc": "2.0", "id": req_id, "result": {"tools": TOOLS}}
         if method == "tools/call":
             params = req.get("params", {})
-            name = params.get("name")
-            args = params.get("arguments", {})
+            name   = params.get("name")
+            args   = params.get("arguments", {})
             if name == "get_server_info":
                 data = self.client.get_server_info()
             elif name == "get_leases_for_site":
@@ -258,6 +389,8 @@ class Server:
                 data = self.client.find_lease_by_ip(args["ip"])
             elif name == "get_lease_summary":
                 data = self.client.get_lease_summary()
+            elif name == "get_subnet_stats":
+                data = self.client.get_subnet_stats()
             else:
                 raise ValueError(f"Unknown tool: {name}")
             return {

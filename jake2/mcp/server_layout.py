@@ -24,6 +24,7 @@ MCP_SERVER_LAYOUT: dict[str, dict[str, Any]] = {
             {"name": "bigmac_readonly_mcp", "module": "mcp/bigmac_readonly_mcp.py"},
             {"name": "site_observability_mcp", "module": "mcp/site_observability_mcp.py"},
             {"name": "kea_mcp", "module": "mcp/kea_mcp.py"},
+            {"name": "rosctl_mcp", "module": "mcp/rosctl_mcp.py"},
         ],
     },
     "wireless_transport": {

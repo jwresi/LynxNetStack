@@ -29,10 +29,23 @@ class User(UserBase):
     company_id: Optional[int] = None
     is_admin: bool = False
     is_company_admin: bool = False
+    full_name: Optional[str] = None
+    role: Optional[str] = None
+    is_active: bool = True
     created_at: datetime
 
     class Config:
         from_attributes = True
+
+    @classmethod
+    def from_orm(cls, obj):
+        instance = super().from_orm(obj)
+        if not instance.role:
+            if instance.is_admin or instance.is_company_admin:
+                instance.role = 'admin'
+            else:
+                instance.role = 'cx'
+        return instance
 
 class Token(BaseModel):
     access_token: str
@@ -149,10 +162,10 @@ class ServicePlan(ServicePlanBase):
 
 class CustomerBase(BaseModel):
     name: str
-    email: str
-    phone: str
-    address: str
-    service_plan_id: int
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    service_plan_id: Optional[int] = None
     status: Optional[str] = "active"
 
 class CustomerCreate(CustomerBase):
@@ -170,6 +183,14 @@ class Customer(CustomerBase):
     id: int
     created_at: datetime
     service_plan: Optional[ServicePlan] = None
+    splynx_id: Optional[int] = None
+    splynx_login: Optional[str] = None
+    ip_address: Optional[str] = None
+    router_name: Optional[str] = None
+    ppp_ip: Optional[str] = None
+    switch_name: Optional[str] = None
+    switch_port: Optional[str] = None
+    netbox_iface_id: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -214,11 +235,12 @@ class TicketComment(TicketCommentBase):
         from_attributes = True
 
 class TicketBase(BaseModel):
-    customer_id: int
+    customer_id: Optional[int] = None
     title: str
-    description: str
+    description: Optional[str] = None
     status: Optional[str] = "open"
     priority: Optional[str] = "medium"
+    assigned_to: Optional[int] = None
 
 class TicketCreate(TicketBase):
     pass
@@ -228,11 +250,15 @@ class TicketUpdate(BaseModel):
     description: Optional[str] = None
     status: Optional[str] = None
     priority: Optional[str] = None
+    assigned_to: Optional[int] = None
+    customer_id: Optional[int] = None
 
 class Ticket(TicketBase):
     id: int
-    created_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     customer: Optional[Customer] = None
+    assignee: Optional[User] = None
     comments: List[TicketComment] = []
 
     class Config:

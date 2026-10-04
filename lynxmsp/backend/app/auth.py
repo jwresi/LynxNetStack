@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+import os
 import bcrypt as _bcrypt
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
@@ -8,9 +9,9 @@ from sqlalchemy.orm import Session
 from .database import get_db, User
 from .schemas import TokenData
 
-SECRET_KEY = "your-secret-key-change-in-production"
+SECRET_KEY = os.environ.get("SECRET_KEY", "lynx-msp-prod-2026-change-me-if-not-set-in-env")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours for dev convenience
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 8  # 8 hours
 
 security = HTTPBearer()
 

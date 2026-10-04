@@ -1,0 +1,27 @@
+services:
+
+  lynxmsp-backend:
+    build:
+      context: ./backend
+    container_name: lynxmsp-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: sqlite:///data/lynxcrm.db
+      SECRET_KEY: ${SECRET_KEY:-lynx-msp-prod-2026-xK9mP3qR7vL2nW8jY5}
+    volumes:
+      # Mount the live DB so data survives rebuilds and can be migrated directly
+      - ./backend/data:/app/data
+    ports:
+      - "8001:8001"
+
+  lynxmsp-frontend:
+    build:
+      context: /Users/jono/pypr-core/apps/lynxmsp-ui
+      dockerfile: /Users/jono/projects/LynxNetStack/lynxmsp/frontend/Dockerfile
+    container_name: lynxmsp-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - lynxmsp-backend
+

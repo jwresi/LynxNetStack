@@ -4,6 +4,7 @@ from typing import List, Optional
 from fastapi import FastAPI, Depends, HTTPException, status, Form
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+import requests as _requests
 
 from . import schemas
 from .auth import authenticate_user, create_access_token, get_current_user
@@ -143,7 +144,7 @@ async def get_users_v1(
             "username": user.username,
             "email": user.email,
             "full_name": getattr(user, 'full_name', ''),
-            "role": getattr(user, 'role', 'user'),
+            "role": (getattr(user, 'role', None) or ('admin' if getattr(user, 'is_admin', False) or getattr(user, 'is_company_admin', False) else 'cx')),
             "is_active": getattr(user, 'is_active', True),
             "created_at": user.created_at
         }
@@ -759,6 +760,18 @@ async def get_customers(
         query = query.filter(Customer.connection_type == connection_type)
     if site_id:
         query = query.filter(Customer.site_id == site_id)
+    return query.all()
+
+
+# ── Customers: address filter (for rosctl building deep-link) ─────────────────
+@app.get("/customers/by-address")
+async def get_customers_by_address(
+    q: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    query = get_company_filter(db.query(Customer), Customer, current_user)
+    query = query.filter(Customer.address.contains(q))
     return query.all()
 
 @app.post("/customers", response_model=schemas.Customer)
@@ -1700,6 +1713,8 @@ async def get_tickets(
     current_user: User = Depends(get_current_user)
 ):
     query = db.query(Ticket)
+    if getattr(current_user, 'role', None) == 'installer':
+        query = query.filter(Ticket.assigned_to == current_user.id)
     if status_filter:
         query = query.filter(Ticket.status == status_filter)
     return query.all()
@@ -1920,18 +1935,35 @@ async def get_users(
 ):
     """Get all users"""
     users = db.query(User).all()
+    def _user_role(u):
+        r = getattr(u, 'role', None)
+        if r: return r
+        if getattr(u, 'is_admin', False) or getattr(u, 'is_company_admin', False): return 'admin'
+        return 'cx'
+
     return [
         {
             "id": user.id,
             "username": user.username,
             "email": user.email,
-            "full_name": getattr(user, 'full_name', ''),
-            "role": getattr(user, 'role', 'user'),
+            "full_name": getattr(user, 'full_name', None),
+            "role": _user_role(user),
+            "is_admin": getattr(user, 'is_admin', False),
+            "is_company_admin": getattr(user, 'is_company_admin', False),
             "is_active": getattr(user, 'is_active', True),
             "created_at": user.created_at
         }
         for user in users
     ]
+
+def _require_admin(current_user: User):
+    is_admin = (
+        getattr(current_user, 'role', None) == 'admin'
+        or getattr(current_user, 'is_admin', False)
+    )
+    if not is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
 
 @app.post("/users")
 async def create_user(
@@ -1940,8 +1972,9 @@ async def create_user(
     current_user: User = Depends(get_current_user)
 ):
     """Create a new user"""
+    _require_admin(current_user)
     from .auth import get_password_hash
-    
+
     # Check if username already exists
     existing_user = db.query(User).filter(User.username == user_data.get("username")).first()
     if existing_user:
@@ -1971,7 +2004,7 @@ async def create_user(
         "username": db_user.username,
         "email": db_user.email,
         "full_name": getattr(db_user, 'full_name', ''),
-        "role": getattr(db_user, 'role', 'user'),
+        "role": getattr(db_user, 'role', None) or 'cx',
         "is_active": getattr(db_user, 'is_active', True),
         "created_at": db_user.created_at
     }
@@ -1992,7 +2025,7 @@ async def get_user(
         "username": user.username,
         "email": user.email,
         "full_name": getattr(user, 'full_name', ''),
-        "role": getattr(user, 'role', 'user'),
+        "role": (getattr(user, 'role', None) or ('admin' if getattr(user, 'is_admin', False) or getattr(user, 'is_company_admin', False) else 'cx')),
         "is_active": getattr(user, 'is_active', True),
         "created_at": user.created_at
     }
@@ -2005,6 +2038,7 @@ async def update_user(
     current_user: User = Depends(get_current_user)
 ):
     """Update user"""
+    _require_admin(current_user)
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -2027,7 +2061,7 @@ async def update_user(
         "username": user.username,
         "email": user.email,
         "full_name": getattr(user, 'full_name', ''),
-        "role": getattr(user, 'role', 'user'),
+        "role": (getattr(user, 'role', None) or ('admin' if getattr(user, 'is_admin', False) or getattr(user, 'is_company_admin', False) else 'cx')),
         "is_active": getattr(user, 'is_active', True),
         "created_at": user.created_at
     }
@@ -2039,10 +2073,11 @@ async def delete_user(
     current_user: User = Depends(get_current_user)
 ):
     """Delete user"""
+    _require_admin(current_user)
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     if user.id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot delete your own account")
     
@@ -3008,6 +3043,412 @@ async def send_system_notification(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error sending notification: {str(e)}")
+
+# ============================================================================
+# WORK ORDERS (SCHEDULING) ENDPOINTS
+# ============================================================================
+
+import json as _json
+
+def _serialize_wo(row) -> dict:
+    """Convert a sqlite3.Row or SQLAlchemy-like object to dict."""
+    d = dict(row) if hasattr(row, 'keys') else {
+        'id': row.id, 'title': row.title, 'type': row.type,
+        'status': row.status, 'priority': row.priority,
+        'customer_id': row.customer_id, 'site_id': row.site_id,
+        'address': row.address, 'scheduled_start': str(row.scheduled_start) if row.scheduled_start else None,
+        'scheduled_end': str(row.scheduled_end) if row.scheduled_end else None,
+        'assigned_to': row.assigned_to, 'ticket_id': row.ticket_id,
+        'notes': row.notes,
+        'checklist': _json.loads(row.checklist) if isinstance(row.checklist, str) else (row.checklist or []),
+        'photos': _json.loads(row.photos) if isinstance(row.photos, str) else (row.photos or []),
+        'gps_checkin': _json.loads(row.gps_checkin) if isinstance(row.gps_checkin, str) else row.gps_checkin,
+        'created_by': row.created_by,
+        'created_at': str(row.created_at) if row.created_at else None,
+        'updated_at': str(row.updated_at) if row.updated_at else None,
+    }
+    return d
+
+
+def _get_raw_db():
+    """Return a raw sqlite3 connection to the same DB."""
+    import sqlite3 as _sqlite3
+    import os as _os
+    db_url = _os.getenv("DATABASE_URL", "sqlite:///./lynxcrm.db")
+    db_path = db_url.replace("sqlite:///", "")
+    conn = _sqlite3.connect(db_path)
+    conn.row_factory = _sqlite3.Row
+    return conn
+
+
+@app.get("/work-orders")
+async def list_work_orders(
+    status: Optional[str] = None,
+    assigned_to: Optional[int] = None,
+    date: Optional[str] = None,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+):
+    conn = _get_raw_db()
+    try:
+        wheres, params = [], []
+        if getattr(current_user, 'role', None) == 'installer':
+            wheres.append("wo.assigned_to = ?"); params.append(current_user.id)
+        elif assigned_to:
+            wheres.append("wo.assigned_to = ?"); params.append(assigned_to)
+        if status:
+            wheres.append("wo.status = ?"); params.append(status)
+        if date:
+            wheres.append("date(wo.scheduled_start) = ?"); params.append(date)
+        where_sql = ("WHERE " + " AND ".join(wheres)) if wheres else ""
+        rows = conn.execute(f"""
+            SELECT wo.*,
+                   u.full_name as assignee_name, u.username as assignee_username,
+                   c.name as customer_name, c.phone as customer_phone
+            FROM work_orders wo
+            LEFT JOIN users u ON wo.assigned_to = u.id
+            LEFT JOIN customers c ON wo.customer_id = c.id
+            {where_sql}
+            ORDER BY wo.scheduled_start ASC NULLS LAST, wo.created_at DESC
+            LIMIT ?
+        """, params + [limit]).fetchall()
+        result = []
+        for r in rows:
+            d = dict(r)
+            d['checklist'] = _json.loads(d['checklist']) if isinstance(d.get('checklist'), str) else (d.get('checklist') or [])
+            d['photos'] = _json.loads(d['photos']) if isinstance(d.get('photos'), str) else (d.get('photos') or [])
+            d['gps_checkin'] = _json.loads(d['gps_checkin']) if isinstance(d.get('gps_checkin'), str) else d.get('gps_checkin')
+            if d.get('assignee_name') or d.get('assignee_username'):
+                d['assignee'] = {
+                    'id': d['assigned_to'],
+                    'full_name': d.pop('assignee_name', None),
+                    'username': d.pop('assignee_username', ''),
+                }
+            else:
+                d.pop('assignee_name', None); d.pop('assignee_username', None)
+            if d.get('customer_name'):
+                d['customer'] = {
+                    'id': d['customer_id'],
+                    'name': d.pop('customer_name'),
+                    'phone': d.pop('customer_phone', None),
+                }
+            else:
+                d.pop('customer_name', None); d.pop('customer_phone', None)
+            result.append(d)
+        return result
+    finally:
+        conn.close()
+
+
+@app.post("/work-orders")
+async def create_work_order(
+    data: dict,
+    current_user: User = Depends(get_current_user),
+):
+    conn = _get_raw_db()
+    try:
+        checklist = _json.dumps(data.get('checklist', []))
+        photos = _json.dumps(data.get('photos', []))
+        cur = conn.execute("""
+            INSERT INTO work_orders (title, type, status, priority, customer_id, site_id,
+                address, scheduled_start, scheduled_end, assigned_to, ticket_id,
+                notes, checklist, photos, created_by, created_at, updated_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+        """, [
+            data.get('title', 'Untitled'),
+            data.get('type', 'install'),
+            data.get('status', 'unscheduled'),
+            data.get('priority', 'normal'),
+            data.get('customer_id'),
+            data.get('site_id'),
+            data.get('address'),
+            data.get('scheduled_start'),
+            data.get('scheduled_end'),
+            data.get('assigned_to'),
+            data.get('ticket_id'),
+            data.get('notes'),
+            checklist,
+            photos,
+            current_user.id,
+        ])
+        conn.commit()
+        wo_id = cur.lastrowid
+        row = conn.execute("SELECT * FROM work_orders WHERE id=?", [wo_id]).fetchone()
+        d = dict(row)
+        d['checklist'] = _json.loads(d['checklist'] or '[]')
+        d['photos'] = _json.loads(d['photos'] or '[]')
+        return d
+    finally:
+        conn.close()
+
+
+@app.get("/work-orders/{wo_id}")
+async def get_work_order(
+    wo_id: int,
+    current_user: User = Depends(get_current_user),
+):
+    conn = _get_raw_db()
+    try:
+        row = conn.execute("SELECT * FROM work_orders WHERE id=?", [wo_id]).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Work order not found")
+        d = dict(row)
+        d['checklist'] = _json.loads(d['checklist'] or '[]')
+        d['photos'] = _json.loads(d['photos'] or '[]')
+        d['gps_checkin'] = _json.loads(d['gps_checkin']) if d.get('gps_checkin') else None
+        return d
+    finally:
+        conn.close()
+
+
+@app.put("/work-orders/{wo_id}")
+async def update_work_order(
+    wo_id: int,
+    data: dict,
+    current_user: User = Depends(get_current_user),
+):
+    conn = _get_raw_db()
+    try:
+        row = conn.execute("SELECT * FROM work_orders WHERE id=?", [wo_id]).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Work order not found")
+        current = dict(row)
+        for key in ['checklist', 'photos', 'gps_checkin']:
+            if key in data and not isinstance(data[key], str):
+                data[key] = _json.dumps(data[key])
+        allowed = ['title', 'type', 'status', 'priority', 'customer_id', 'site_id',
+                   'address', 'scheduled_start', 'scheduled_end', 'assigned_to',
+                   'ticket_id', 'notes', 'checklist', 'photos', 'gps_checkin']
+        sets, params = [], []
+        for k in allowed:
+            if k in data:
+                sets.append(f"{k}=?"); params.append(data[k])
+        if not sets:
+            d = current
+        else:
+            sets.append("updated_at=CURRENT_TIMESTAMP")
+            conn.execute(f"UPDATE work_orders SET {', '.join(sets)} WHERE id=?", params + [wo_id])
+            conn.commit()
+            d = dict(conn.execute("SELECT * FROM work_orders WHERE id=?", [wo_id]).fetchone())
+        d['checklist'] = _json.loads(d['checklist'] or '[]')
+        d['photos'] = _json.loads(d['photos'] or '[]')
+        d['gps_checkin'] = _json.loads(d['gps_checkin']) if d.get('gps_checkin') else None
+        return d
+    finally:
+        conn.close()
+
+
+@app.delete("/work-orders/{wo_id}")
+async def delete_work_order(
+    wo_id: int,
+    current_user: User = Depends(get_current_user),
+):
+    conn = _get_raw_db()
+    try:
+        row = conn.execute("SELECT id FROM work_orders WHERE id=?", [wo_id]).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Work order not found")
+        conn.execute("DELETE FROM work_orders WHERE id=?", [wo_id])
+        conn.commit()
+        return {"message": "Deleted"}
+    finally:
+        conn.close()
+
+
+@app.post("/work-orders/{wo_id}/checkin")
+async def work_order_checkin(
+    wo_id: int,
+    data: dict,
+    current_user: User = Depends(get_current_user),
+):
+    """Record GPS check-in for a work order."""
+    conn = _get_raw_db()
+    try:
+        row = conn.execute("SELECT id FROM work_orders WHERE id=?", [wo_id]).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Work order not found")
+        checkin = _json.dumps({
+            'lat': data.get('lat', 0),
+            'lng': data.get('lng', 0),
+            'time': datetime.utcnow().isoformat(),
+        })
+        conn.execute(
+            "UPDATE work_orders SET gps_checkin=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+            [checkin, wo_id],
+        )
+        conn.commit()
+        d = dict(conn.execute("SELECT * FROM work_orders WHERE id=?", [wo_id]).fetchone())
+        d['checklist'] = _json.loads(d['checklist'] or '[]')
+        d['photos'] = _json.loads(d['photos'] or '[]')
+        d['gps_checkin'] = _json.loads(d['gps_checkin']) if d.get('gps_checkin') else None
+        return d
+    finally:
+        conn.close()
+
+
+# ── rosctl proxy ──────────────────────────────────────────────────────────────
+_ROSCTL_URL  = "http://172.27.226.246:3200"
+_ROSCTL_USER = "jonathan"
+_ROSCTL_PASS = "F7pdn*AQ0Uu4S#t"
+_rosctl_token: list = []   # mutable container so we can update in-place
+
+def _rosctl_headers() -> dict:
+    """Return Bearer token headers, acquiring/refreshing as needed."""
+    if not _rosctl_token:
+        resp = _requests.post(
+            f"{_ROSCTL_URL}/api/v1/auth/login",
+            json={"username": _ROSCTL_USER, "password": _ROSCTL_PASS},
+            timeout=8,
+        )
+        resp.raise_for_status()
+        _rosctl_token.append(resp.json()["access_token"])
+    return {"Authorization": f"Bearer {_rosctl_token[0]}", "Content-Type": "application/json"}
+
+def _rosctl_get(path: str, params: dict | None = None):
+    """GET from rosctl (authenticated, /api/v1/ prefix) — used for sites/devices list."""
+    global _rosctl_token
+    url = f"{_ROSCTL_URL}/api/v1/{path.lstrip('/')}"
+    hdrs = _rosctl_headers()
+    r = _requests.get(url, headers=hdrs, params=params or {}, timeout=10)
+    if r.status_code == 401:
+        _rosctl_token.clear()
+        hdrs = _rosctl_headers()
+        r = _requests.get(url, headers=hdrs, params=params or {}, timeout=10)
+    r.raise_for_status()
+    return r.json()
+
+_rosctl_name_to_id: dict = {}  # name → integer id cache
+
+def _rosctl_device_id(name: str) -> int:
+    """Resolve device name to integer ID, caching the devices list."""
+    if name in _rosctl_name_to_id:
+        return _rosctl_name_to_id[name]
+    data = _rosctl_get("devices", {"limit": 500})
+    for d in data.get("devices", []):
+        _rosctl_name_to_id[d["name"]] = d["id"]
+    if name not in _rosctl_name_to_id:
+        raise HTTPException(status_code=404, detail=f"Device '{name}' not found in rosctl")
+    return _rosctl_name_to_id[name]
+
+def _rosctl_command(device_name: str, command: str) -> dict:
+    """POST a RouterOS command to a device via rosctl and return the result."""
+    global _rosctl_token
+    dev_id = _rosctl_device_id(device_name)
+    url = f"{_ROSCTL_URL}/api/v1/devices/{dev_id}/command"
+    hdrs = _rosctl_headers()
+    r = _requests.post(url, headers=hdrs, json={"command": command}, timeout=20)
+    if r.status_code == 401:
+        _rosctl_token.clear()
+        hdrs = _rosctl_headers()
+        r = _requests.post(url, headers=hdrs, json={"command": command}, timeout=20)
+    r.raise_for_status()
+    return r.json()
+
+@app.get("/rosctl/sites")
+async def rosctl_sites(current_user: User = Depends(get_current_user)):
+    try:
+        return _rosctl_get("sites")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"rosctl unreachable: {e}")
+
+@app.get("/rosctl/devices")
+async def rosctl_devices(
+    site_id: Optional[str] = None,
+    limit: int = 500,
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        params: dict = {"limit": limit}
+        if site_id:
+            params["site_id"] = site_id
+        return _rosctl_get("devices", params)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"rosctl unreachable: {e}")
+
+@app.get("/rosctl/devices/{device_name}/detail")
+async def rosctl_device_detail(device_name: str, current_user: User = Depends(get_current_user)):
+    try:
+        return _rosctl_get(f"devices/{_rosctl_device_id(device_name)}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"rosctl unreachable: {e}")
+
+# Mapping from URL sub-path to RouterOS command
+_DEVICE_CMD_MAP = {
+    "interfaces":      "/interface/print detail",
+    "ip-addresses":    "/ip/address/print detail",
+    "system-resource": "/system/resource/print",
+    "system-health":   "/system/health/print",
+    "routes":          "/ip/route/print detail",
+    "ppp-active":      "/ppp/active/print detail",
+    "bridge-hosts":    "/interface/bridge/host/print detail",
+    "arp":             "/ip/arp/print detail",
+    "neighbors":       "/ip/neighbor/print detail",
+    "logs":            "/log/print",
+}
+
+def _rosctl_device_sub(device_name: str, sub: str):
+    command = _DEVICE_CMD_MAP.get(sub)
+    if not command:
+        raise HTTPException(status_code=400, detail=f"Unknown sub-resource: {sub}")
+    try:
+        result = _rosctl_command(device_name, command)
+        return {"device": device_name, "command": command, "success": result.get("success", True), "data": result.get("data", []), "error": result.get("error")}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"rosctl unreachable: {e}")
+
+@app.get("/rosctl/devices/{device_name}/interfaces")
+async def rosctl_interfaces(device_name: str, current_user: User = Depends(get_current_user)):
+    return _rosctl_device_sub(device_name, "interfaces")
+
+@app.get("/rosctl/devices/{device_name}/ip-addresses")
+async def rosctl_ip_addresses(device_name: str, current_user: User = Depends(get_current_user)):
+    return _rosctl_device_sub(device_name, "ip-addresses")
+
+@app.get("/rosctl/devices/{device_name}/system-resource")
+async def rosctl_system_resource(device_name: str, current_user: User = Depends(get_current_user)):
+    return _rosctl_device_sub(device_name, "system-resource")
+
+@app.get("/rosctl/devices/{device_name}/system-health")
+async def rosctl_system_health(device_name: str, current_user: User = Depends(get_current_user)):
+    return _rosctl_device_sub(device_name, "system-health")
+
+@app.get("/rosctl/devices/{device_name}/routes")
+async def rosctl_routes(device_name: str, current_user: User = Depends(get_current_user)):
+    return _rosctl_device_sub(device_name, "routes")
+
+@app.get("/rosctl/devices/{device_name}/ppp-active")
+async def rosctl_ppp_active(device_name: str, current_user: User = Depends(get_current_user)):
+    return _rosctl_device_sub(device_name, "ppp-active")
+
+@app.get("/rosctl/devices/{device_name}/bridge-hosts")
+async def rosctl_bridge_hosts(device_name: str, current_user: User = Depends(get_current_user)):
+    return _rosctl_device_sub(device_name, "bridge-hosts")
+
+@app.get("/rosctl/devices/{device_name}/arp")
+async def rosctl_arp(device_name: str, current_user: User = Depends(get_current_user)):
+    return _rosctl_device_sub(device_name, "arp")
+
+@app.get("/rosctl/devices/{device_name}/neighbors")
+async def rosctl_neighbors(device_name: str, current_user: User = Depends(get_current_user)):
+    return _rosctl_device_sub(device_name, "neighbors")
+
+@app.get("/rosctl/devices/{device_name}/logs")
+async def rosctl_logs(device_name: str, current_user: User = Depends(get_current_user)):
+    return _rosctl_device_sub(device_name, "logs")
+
+@app.get("/rosctl/devices/{device_name:path}")
+async def rosctl_device(device_name: str, current_user: User = Depends(get_current_user)):
+    try:
+        return _rosctl_get(f"devices/{_rosctl_device_id(device_name)}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"rosctl unreachable: {e}")
+
 
 if __name__ == "__main__":
     import uvicorn

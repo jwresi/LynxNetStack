@@ -40,17 +40,28 @@ class OrganizationInfo(Base):
 
 class User(Base):
     __tablename__ = "users"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, index=True)
     email = Column(String, index=True)
     password_hash = Column(String)
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)  # Nullable for admin/demo user
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)
     is_admin = Column(Boolean, default=False)
-    is_company_admin = Column(Boolean, default=False)  # Admin for their company
+    is_company_admin = Column(Boolean, default=False)
+    full_name = Column(String, nullable=True)
+    role = Column(String, nullable=True)          # 'admin' | 'cx' | 'installer'
+    is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     company = relationship("Company", back_populates="users")
+
+    @property
+    def effective_role(self) -> str:
+        if self.role:
+            return self.role
+        if self.is_admin or self.is_company_admin:
+            return 'admin'
+        return 'cx'
 
 class ServicePlan(Base):
     __tablename__ = "service_plans"
@@ -101,6 +112,16 @@ class Customer(Base):
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
+    splynx_id = Column(Integer, unique=True, nullable=True)
+    splynx_login = Column(String, nullable=True)
+    ip_address = Column(String, nullable=True)
+    router_name = Column(String, nullable=True)
+    ppp_ip = Column(String, nullable=True)
+    switch_name = Column(String, nullable=True)
+    switch_port = Column(String, nullable=True)
+    netbox_iface_id = Column(Integer, nullable=True)
+    netbox_tenant_id = Column(Integer, nullable=True)
+
     service_plan = relationship("ServicePlan", back_populates="customers")
     invoices = relationship("Invoice", back_populates="customer")
     tickets = relationship("Ticket", back_populates="customer")
@@ -123,17 +144,20 @@ class Invoice(Base):
 
 class Ticket(Base):
     __tablename__ = "tickets"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     customer_id = Column(Integer, ForeignKey("customers.id"))
     title = Column(String)
     description = Column(Text)
     status = Column(String, default="open")
     priority = Column(String, default="medium")
+    assigned_to = Column(Integer, ForeignKey("users.id"), nullable=True)
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
     customer = relationship("Customer", back_populates="tickets")
+    assignee = relationship("User", foreign_keys=[assigned_to])
     comments = relationship("TicketComment", back_populates="ticket")
 
 class TicketComment(Base):
@@ -678,5 +702,20 @@ class UserInvitation(Base):
     company = relationship("Company")
     invited_by = relationship("User")
 
+def _migrate(conn):
+    """Apply additive schema migrations that SQLAlchemy create_all won't handle."""
+    cur = conn.cursor()
+    existing = {row[1] for row in cur.execute("PRAGMA table_info(tickets)").fetchall()}
+    if "assigned_to" not in existing:
+        cur.execute("ALTER TABLE tickets ADD COLUMN assigned_to INTEGER REFERENCES users(id)")
+    if "updated_at" not in existing:
+        cur.execute("ALTER TABLE tickets ADD COLUMN updated_at DATETIME")
+    conn.commit()
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
+    import sqlite3 as _sqlite3
+    raw = _sqlite3.connect(engine.url.database)
+    _migrate(raw)
+    raw.close()

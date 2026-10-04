@@ -24,6 +24,8 @@ Internet → Cloudflare (DNS proxy, public TLS)
 ```
 
 kea-sync runs on jumpB separately — it is NOT part of this compose stack.
+On-demand DHCP lease queries use `kea_mcp.py` (Stork REST API over ZeroTier).
+No SSH to jumpB required for lease lookups.
 
 ---
 
@@ -93,7 +95,7 @@ Required values to fill in:
 cp jake2/config/.env.example jake2/config/.env
 nano jake2/config/.env
 # Fill in: NETBOX_TOKEN, BIGMAC_URL, SSH_MCP_USERNAME/PASSWORD,
-#          OLLAMA_ENDPOINT, and any vendor credentials
+#          STORK_PASSWORD, OLLAMA_ENDPOINT, and any vendor credentials
 
 cp billing/netbox-stripe-sync/.env.example billing/netbox-stripe-sync/.env
 nano billing/netbox-stripe-sync/.env

@@ -249,7 +249,7 @@ inventory_observability  netbox_readonly_mcp              NetBox devices/circuit
                          alertmanager_readonly_mcp        Prometheus Alertmanager
                          bigmac_readonly_mcp              RouterOS switch state via BigMac proxy
                          site_observability_mcp           Per-site online count, fault summary
-                         kea_mcp                          On-demand Kea lease queries (SSH → jumpB)
+                         kea_mcp                          On-demand Kea lease queries (Stork REST API → ZeroTier)
 wireless_transport       cnwave_exporter_readonly_mcp     Cambium cnWave RF metrics
 vendor_controllers       tauc_mcp                         TP-Link OLT/ACS controller
                          vilo_mcp                         Vilo mesh AP portal
@@ -308,9 +308,9 @@ and whether the circuit appears up.
 1. IPAM → IP Addresses → search the subscriber IP or MAC
 2. Or: DCIM → Circuits → search CX-Circuit ID (e.g. `000004.001.12B`)
 
-### Via kea_mcp (live Kea query)
+### Via kea_mcp (Stork REST API — no SSH needed)
 
-Ask Jake directly — `kea_mcp` SSHes to jumpB on demand:
+Ask Jake directly — `kea_mcp` queries Stork at `172.27.209.248:9080` over ZeroTier:
 
 ```
 "what leases does cambridge have right now"
@@ -319,28 +319,37 @@ Ask Jake directly — `kea_mcp` SSHes to jumpB on demand:
 ```
 
 Or use the MCP tools directly:
-- `get_leases_for_site("cambridge")` — all active leases for a site
-- `find_lease_by_mac("aa:bb:cc:dd:ee:ff")` — lease by MAC
-- `find_lease_by_ip("100.65.4.142")` — lease by IP
-- `get_lease_summary()` — count per subnet across all 63 subnets
+- `get_leases_for_site("cambridge")` — cached leases for a site (Stork 60s cache)
+- `find_lease_by_mac("aa:bb:cc:dd:ee:ff")` — live Kea lookup via Stork text search
+- `find_lease_by_ip("100.65.4.142")` — live Kea lookup via Stork text search
+- `get_lease_summary()` — assigned/total counts and utilization per subnet
+- `get_server_info()` — Kea version, uptime, RPS, machine info
 
-### Reading a Kea lease record
+**Stork lease cache note**: Stork caches a subset of active leases (~59 of 415 as of
+last check). `find_lease_by_mac` and `find_lease_by_ip` trigger live Kea queries via
+Stork's text search and are authoritative. `get_leases_for_site` returns cached results
+only — counts may be lower than the true active count.
+
+### Reading a Stork lease record
+
+Stork lease records differ from raw Kea format — no `giaddr` or `circuit-id` (those
+are Kea-internal fields not exposed by Stork's lease API):
 
 ```json
 {
-  "ip-address": "100.65.4.142",        ← subscriber's current IP
-  "hw-address": "aa:bb:cc:dd:ee:ff",   ← subscriber CPE MAC
-  "giaddr": "100.65.4.11",             ← relay = primary switch for site 000004
-  "valid-lft": 86400,                  ← lease length in seconds (24h)
-  "user-context": {
-    "ISC": {
-      "relay-agent-info": {
-        "circuit-id": "6574686572333a3230"   ← hex for "ether3:20" = ETH3, VLAN 20
-      }
-    }
-  }
+  "ipAddress":    "100.65.4.142",       ← subscriber's current IP
+  "hwAddress":    "aa:bb:cc:dd:ee:ff",  ← subscriber CPE MAC
+  "clientId":     "01:aa:bb:cc:dd:ee:ff",
+  "subnetPrefix": "100.65.4.0/24",      ← site subnet
+  "subnetId":     4,                    ← Stork subnet ID (= third octet for 100.65.X)
+  "state":        0,                    ← 0 = active
+  "validLifetime": 86400,               ← lease length in seconds (24h)
+  "cltt":         1783026936            ← client last transmission time (epoch)
 }
 ```
+
+For `giaddr` and `circuit-id`, check the switch ARP table via RouterOS MCP or the
+NetBox CX-Circuit record for the unit.
 
 Decode the circuit-id:
 ```bash
@@ -392,17 +401,28 @@ Ask Jake:
 
 Or use `bigmac_readonly_mcp` directly if Jake is unavailable.
 
-### Step 4 — Kea lease check on jumpB
+### Step 4 — Kea lease check via Stork
 
-If DHCP is suspect:
+If DHCP is suspect, query Stork directly over ZeroTier (no SSH needed):
+
+```
+Jake: "how many active leases does nycha have"
+Jake: "get lease summary"
+```
+
+Or via Stork API directly:
 ```bash
-ssh jumpB
-# Count leases for a subnet (site 7 = 100.65.7.0/24)
-/opt/kea-dhcp/list-leases | python3 -c "
-import json, sys
-leases = json.load(sys.stdin)
-site7 = [l for l in leases if l.get('ip-address','').startswith('100.65.7.')]
-print(f'{len(site7)} active leases for site 000007')
+# Authenticate once
+curl -sf -X POST http://172.27.209.248:9080/api/sessions \
+  -H 'Content-Type: application/json' \
+  -d '{"authenticationMethodId":"internal","identifier":"admin","secret":"*azBXCsw9XL#DF6"}' \
+  -c /tmp/stork_cookie
+
+# Count leases for site 000007 (Stork subnet ID 7 = 100.65.7.0/24)
+curl -sf "http://172.27.209.248:9080/api/lease-list?subnetId=7" \
+  -b /tmp/stork_cookie | python3 -c "
+import json,sys; d=json.load(sys.stdin)
+print(f'{d.get(\"total\",0)} cached leases for nycha')
 "
 ```
 
@@ -501,12 +521,33 @@ MikroTik switch (giaddr = 100.65.X.11)
     ▼
 Kea DHCP4 on jumpB (127.0.0.1:8000)
     │  assigns from pool .41–.250
-    ▼
-kea-sync (running on jumpB, polls every 60s)
-    │  resolves: giaddr → device → interface → cable → CX-Circuit
-    ▼
-NetBox IPAM: 100.65.X.Y/32 record, linked to CX-Circuit + Tenant
+    │
+    ├─▶ Stork 2.5.0 agent (co-located in kea-dhcp4 container)
+    │       polls leases every 60s, serves REST API at 172.27.209.248:9080
+    │       ← kea_mcp.py queries Stork directly over ZeroTier (no SSH needed)
+    │
+    └─▶ kea-sync (running on jumpB, polls every 60s)
+            resolves: giaddr → device → interface → cable → CX-Circuit
+            ▼
+        NetBox IPAM: 100.65.X.Y/32 record, linked to CX-Circuit + Tenant
 ```
+
+**On-demand lease queries** always go through Stork (`kea_mcp.py`). The kea-sync
+daemon is only needed for the batch IPAM sync job — it is separate from Jake2.
+
+### Stork subnet ID mapping
+
+Stork assigns subnet IDs that match the third octet of `100.65.X.0/24` directly:
+
+| Site | Stork ID | Subnet |
+|------|----------|--------|
+| savoy | 2 | 100.65.2.0/24 |
+| park79 | 3 | 100.65.3.0/24 |
+| cambridge | 4 | 100.65.4.0/24 |
+| claiborne | 6 | 100.65.6.0/24 |
+| nycha | 7 | 100.65.7.0/24 |
+| chenoweth | 8 | 100.65.8.0/24 |
+| essex | **70** | **100.64.36.0/22** (flat /22 exception) |
 
 ### CGNAT subnets
 
@@ -516,7 +557,7 @@ NetBox IPAM: 100.65.X.Y/32 record, linked to CX-Circuit + Tenant
 - Relay (primary switch): `.X.11`
 - Essex (site 5) exception: flat `100.64.36.0/22`
 
-### kea-sync status check
+### kea-sync status check (NetBox IPAM sync daemon on jumpB)
 
 ```bash
 ssh jumpB
@@ -539,18 +580,24 @@ jumpB$ docker ps | grep kea
 jumpB$ docker logs kea-dhcp4 --tail 30
 ```
 
-### Manually checking a lease
+### Manually checking a lease (via Stork — no SSH needed)
+
+Use Jake or call `kea_mcp.py` directly. Stork is reachable at `172.27.209.248:9080`
+over ZeroTier. Example direct API call:
 
 ```bash
-ssh jumpB
-/opt/kea-dhcp/list-leases | python3 -c "
-import json, sys
-leases = json.load(sys.stdin)
-for l in leases:
-    if l.get('hw-address') == 'aa:bb:cc:dd:ee:ff':
-        print(json.dumps(l, indent=2))
-"
+# Authenticate
+TOKEN=$(curl -sf -X POST http://172.27.209.248:9080/api/sessions \
+  -H 'Content-Type: application/json' \
+  -d '{"authenticationMethodId":"internal","identifier":"admin","secret":"*azBXCsw9XL#DF6"}' \
+  -c /tmp/stork_cookie -b /tmp/stork_cookie -w "%{http_code}" -o /dev/null)
+
+# Search by MAC or IP
+curl -sf http://172.27.209.248:9080/api/lease-list?text=aa:bb:cc:dd:ee:ff \
+  -b /tmp/stork_cookie | python3 -m json.tool
 ```
+
+Or just ask Jake: `"find the lease for MAC aa:bb:cc:dd:ee:ff"`
 
 ---
 
@@ -663,7 +710,7 @@ BillingAccount → Tenant
 |---|---|
 | Quick subscriber status | Jake2: `"unit 4A at nycha"` |
 | Site-wide outage check | Jake2 + Prometheus |
-| Current DHCP leases | Jake → Kea via `site_observability_mcp` |
+| Current DHCP leases | Jake → `kea_mcp` → Stork (172.27.209.248:9080) |
 | Edit subscriber data | NetBox UI directly |
 | Push switch config | Jake → `ssh_mcp` (approval required) |
 | Read switch state | Jake → `bigmac_readonly_mcp` |
