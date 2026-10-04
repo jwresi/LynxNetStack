@@ -53,7 +53,11 @@ lynxmsp/frontend/build/
 jake2/logs/
 jake2/output/
 jake2/artifacts/
-jake2/audits/
+# jake2/audits/ holds SOURCE (audit workbook + Grafana push scripts), not
+# generated output. Track the code; ignore any artifacts written beside it.
+jake2/audits/**/*.xlsx
+jake2/audits/**/*.csv
+jake2/audits/**/*.log
 provisioner/configs/*.rsc
 !provisioner/configs/templates/
 
